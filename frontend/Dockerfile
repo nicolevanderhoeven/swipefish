@@ -15,6 +15,8 @@ RUN npm ci
 # Copy source code
 COPY src/ ./src/
 COPY index.html ./
+# Copy public assets (images, etc.)
+COPY public/ ./public/
 
 # Build the app
 # Inject environment variables at build time
