@@ -28,12 +28,26 @@ export function Room() {
 
   const handlePlayerJoined = useCallback((event: PlayerJoinedEvent) => {
     console.log('Room component: Received player-joined event', event);
-    setRoomState(event.room);
+    console.log('Room component: Event room state:', event.room);
+    console.log('Room component: Players in event:', event.room.players);
+    // Use functional update to ensure React detects the change
+    setRoomState((prevState) => {
+      // Always update to the new state from the event
+      // This ensures React detects the change even if the object reference is similar
+      console.log('Room component: Previous state players:', prevState?.players.length || 0);
+      console.log('Room component: New state players:', event.room.players.length);
+      return event.room;
+    });
   }, []);
 
   const handlePlayerLeft = useCallback((event: PlayerLeftEvent) => {
     console.log('Room component: Received player-left event', event);
-    setRoomState(event.room);
+    // Use functional update to ensure React detects the change
+    setRoomState((prevState) => {
+      console.log('Room component: Previous state players:', prevState?.players.length || 0);
+      console.log('Room component: New state players:', event.room.players.length);
+      return event.room;
+    });
   }, []);
 
   useEffect(() => {
@@ -44,27 +58,12 @@ export function Room() {
     socket.on('player-joined', handlePlayerJoined);
     socket.on('player-left', handlePlayerLeft);
 
-    // Set up event listeners FIRST, before joining, to ensure we don't miss any events
-    socket.on('join-room-response', handleJoinRoomResponse);
-    socket.on('player-joined', handlePlayerJoined);
-    socket.on('player-left', handlePlayerLeft);
-
-    // Always join the room (with a small delay to ensure socket is ready)
-    // This ensures the socket is in the socket.io room to receive broadcasts
-    // Even if the player already created the room, we need to rejoin to ensure
-    // we're in the socket.io room for receiving player-joined/player-left events
+    // Only join the room if we haven't joined yet
+    // The create-room handler already joins the socket to the room, so we don't need to rejoin
+    // unless we're coming from a direct navigation to the room URL
     const joinTimeout = setTimeout(() => {
       if (!hasJoinedRef.current) {
         console.log(`Room component: Joining room with passphrase ${passphrase}`);
-        const playerName = getPlayerName();
-        socket.emit('join-room', {
-          passphrase,
-          name: playerName.trim() || undefined,
-        });
-      } else {
-        // Even if we've already joined, we should rejoin to ensure socket.io room membership
-        // This is safe because the backend handles duplicate joins gracefully
-        console.log(`Room component: Rejoining room to ensure socket.io room membership`);
         const playerName = getPlayerName();
         socket.emit('join-room', {
           passphrase,

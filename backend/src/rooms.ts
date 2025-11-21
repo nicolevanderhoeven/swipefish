@@ -171,6 +171,11 @@ export function initializeRoomHandlers(io: Server): void {
 
         // Join socket room for this game room
         socket.join(room.id);
+        console.log(`Socket ${socket.id} joined socket.io room ${room.id} after creating room`);
+        
+        // Verify socket is in the room
+        const socketsInRoomAfterCreate = await io.in(room.id).fetchSockets();
+        console.log(`Room ${room.id} has ${socketsInRoomAfterCreate.length} sockets after creation:`, socketsInRoomAfterCreate.map(s => s.id));
 
         // Format room state for JSON serialization
         const formattedRoomState: RoomState = {
@@ -258,12 +263,19 @@ export function initializeRoomHandlers(io: Server): void {
         }
 
         // Join socket room (if not already in it)
+        // Note: socket.join() is idempotent, so it's safe to call multiple times
         socket.join(room.id);
         console.log(`Socket ${socket.id} joined socket.io room ${room.id}`);
         
         // Verify socket is in the room by checking room membership
         const socketsInRoom = await io.in(room.id).fetchSockets();
         console.log(`Room ${room.id} now has ${socketsInRoom.length} sockets:`, socketsInRoom.map(s => s.id));
+        
+        // Also log which players are in the database for this room
+        const dbPlayerSocketIds = freshRoomState.players.map(p => p.socket_id);
+        console.log(`Players in database for room ${room.id}:`, dbPlayerSocketIds);
+        console.log(`Sockets in socket.io room:`, socketsInRoom.map(s => s.id));
+        console.log(`Missing sockets (in DB but not in socket.io room):`, dbPlayerSocketIds.filter(id => !socketsInRoom.find(s => s.id === id)));
 
         // Format fresh room state for JSON serialization (convert dates to strings)
         const formattedRoomState: RoomState = {
