@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: swipefish
+  labels:
+    app: swipefish
+    component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: swipefish
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: swipefish
+        component: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: your-registry/swipefish-frontend:latest  # Update with your image
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: swipefish
+  labels:
+    app: swipefish
+    component: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: swipefish
+    component: frontend
+

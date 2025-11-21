@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: swipefish-config
+  namespace: swipefish
+data:
+  # Backend configuration
+  PORT: "3000"
+  NODE_ENV: "production"
+  CORS_ORIGIN: "*"
+  
+  # Frontend configuration
+  VITE_SOCKET_URL: "wss://your-domain.com"  # Update with your actual domain
+

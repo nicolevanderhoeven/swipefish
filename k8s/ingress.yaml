@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swipefish-ingress
+  namespace: swipefish
+  annotations:
+    # DigitalOcean Load Balancer annotations
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # If using cert-manager
+    # For WebSocket support
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/websocket-services: "backend"
+    # CORS (if needed at ingress level)
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+spec:
+  # Uncomment and configure TLS when you have SSL certificates
+  # tls:
+  # - hosts:
+  #   - your-domain.com
+  #   secretName: swipefish-tls
+  rules:
+  - host: your-domain.com  # Update with your actual domain
+    http:
+      paths:
+      # Frontend - serve all routes
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
+      # Backend WebSocket - Socket.io endpoint
+      - path: /socket.io
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 3000
+

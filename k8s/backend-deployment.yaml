@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: swipefish
+  labels:
+    app: swipefish
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: swipefish
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: swipefish
+        component: backend
+    spec:
+      containers:
+      - name: backend
+        image: your-registry/swipefish-backend:latest  # Update with your image
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: swipefish-config
+              key: PORT
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: swipefish-config
+              key: NODE_ENV
+        - name: CORS_ORIGIN
+          valueFrom:
+            configMapKeyRef:
+              name: swipefish-config
+              key: CORS_ORIGIN
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: swipefish-secrets
+              key: DATABASE_URL
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: swipefish
+  labels:
+    app: swipefish
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: swipefish
+    component: backend
+
