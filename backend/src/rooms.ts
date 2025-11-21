@@ -94,18 +94,33 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
   console.log(`About to broadcast player-left to room ${roomId}. Sockets in room: ${socketsInRoomForBroadcast.length}`, socketsInRoomForBroadcast.map(s => s.id));
   console.log(`Remaining players in database: ${freshRoomState.players.length}`, freshRoomState.players.map(p => ({ socketId: p.socket_id, name: p.name })));
   
-  // Broadcast player left to all remaining players in the room (BEFORE removing socket from room)
-  // Use io.to() to send to ALL sockets in the room
-  // The leaving socket will receive it but that's okay - it can ignore it
+  // Broadcast player left to all remaining players
+  // Send directly to each player's socket by socket ID (from database)
+  // This ensures all players receive the event even if their socket isn't in the socket.io room
   console.log(`Broadcasting player-left event to room ${roomId} (${freshRoomState.players.length} remaining players)`);
   
-  // Send to ALL sockets in the room using io.to()
-  // This ensures all players (including Player 2) receive the event
-  io.to(roomId).emit('player-left', {
+  const playerLeftEvent = {
     socketId: socketId,
     room: formattedRoomState as any,
-  });
-  console.log(`Broadcasted player-left event using io.to() to room ${roomId}. Room now has ${freshRoomState.players.length} players. Broadcast sent to ${socketsInRoomForBroadcast.length} sockets.`);
+  };
+  
+  // Send directly to each remaining player's socket
+  let sentCount = 0;
+  for (const player of freshRoomState.players) {
+    const targetSocket = io.sockets.sockets.get(player.socket_id);
+    if (targetSocket) {
+      targetSocket.emit('player-left', playerLeftEvent);
+      sentCount++;
+      console.log(`Sent player-left event directly to socket ${player.socket_id}`);
+    } else {
+      console.log(`Warning: Socket ${player.socket_id} not found (may have disconnected)`);
+    }
+  }
+  
+  // Also broadcast to the room as a fallback (in case any sockets are in the room but not in our list)
+  io.to(roomId).emit('player-left', playerLeftEvent);
+  
+  console.log(`Broadcasted player-left event to room ${roomId}. Room now has ${freshRoomState.players.length} players. Sent directly to ${sentCount} sockets, also broadcast to room (${socketsInRoomForBroadcast.length} sockets in room).`);
 
   // Remove socket from socket.io room AFTER broadcasting
   if (socket) {
@@ -314,8 +329,8 @@ export function initializeRoomHandlers(io: Server): void {
         
         if (joinedPlayer) {
           console.log(`Broadcasting player-joined event to room ${room.id} for player ${socket.id} (name: ${joinedPlayer.name || 'none'})`);
-          // Use io.to() which sends to ALL sockets in the room (not just excluding the sender)
-          io.to(room.id).emit('player-joined', {
+          
+          const playerJoinedEvent = {
             player: {
               ...joinedPlayer,
               joined_at: joinedPlayer.joined_at instanceof Date 
@@ -323,12 +338,34 @@ export function initializeRoomHandlers(io: Server): void {
                 : (joinedPlayer.joined_at as any),
             },
             room: formattedRoomState as any,
-          });
-          console.log(`Broadcasted player-joined event to room ${room.id} with ${freshRoomState.players.length} total players`);
+          };
+          
+          // Send directly to each player's socket by socket ID (from database)
+          // This ensures all players receive the event even if their socket isn't in the socket.io room
+          let sentCount = 0;
+          for (const player of freshRoomState.players) {
+            // Don't send to the joining player (they already got join-room-response)
+            if (player.socket_id === socket.id) {
+              continue;
+            }
+            const targetSocket = io.sockets.sockets.get(player.socket_id);
+            if (targetSocket) {
+              targetSocket.emit('player-joined', playerJoinedEvent);
+              sentCount++;
+              console.log(`Sent player-joined event directly to socket ${player.socket_id}`);
+            } else {
+              console.log(`Warning: Socket ${player.socket_id} not found (may have disconnected)`);
+            }
+          }
+          
+          // Also broadcast to the room as a fallback
+          io.to(room.id).emit('player-joined', playerJoinedEvent);
+          
+          console.log(`Broadcasted player-joined event to room ${room.id} with ${freshRoomState.players.length} total players. Sent directly to ${sentCount} sockets, also broadcast to room (${socketsInRoomForBroadcast.length} sockets in room).`);
         } else {
           console.log(`Warning: Could not find joined player ${socket.id} in room state, but broadcasting anyway`);
           // Broadcast anyway with the fresh room state so all players stay in sync
-          io.to(room.id).emit('player-joined', {
+          const playerJoinedEvent = {
             player: {
               id: 'unknown',
               room_id: room.id,
@@ -337,7 +374,25 @@ export function initializeRoomHandlers(io: Server): void {
               joined_at: new Date().toISOString(),
             },
             room: formattedRoomState as any,
-          });
+          };
+          
+          // Send directly to all other players
+          let sentCount = 0;
+          for (const player of freshRoomState.players) {
+            if (player.socket_id === socket.id) {
+              continue;
+            }
+            const targetSocket = io.sockets.sockets.get(player.socket_id);
+            if (targetSocket) {
+              targetSocket.emit('player-joined', playerJoinedEvent);
+              sentCount++;
+            }
+          }
+          
+          // Also broadcast to the room as a fallback
+          io.to(room.id).emit('player-joined', playerJoinedEvent);
+          
+          console.log(`Broadcasted player-joined event (unknown player) to room ${room.id}. Sent directly to ${sentCount} sockets.`);
         }
       } catch (error) {
         console.error('Error joining room:', error);
