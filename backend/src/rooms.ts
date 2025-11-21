@@ -77,6 +77,10 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
     })),
   };
 
+  // Get list of sockets in room before broadcasting to verify who will receive it
+  const socketsInRoomForBroadcast = await io.in(roomId).fetchSockets();
+  console.log(`About to broadcast player-left to room ${roomId}. Sockets in room: ${socketsInRoomForBroadcast.length}`, socketsInRoomForBroadcast.map(s => s.id));
+  
   // Broadcast player left to all remaining players in the room (BEFORE removing socket from room)
   console.log(`Broadcasting player-left event to room ${roomId} (${freshRoomState.players.length} remaining players)`);
   io.to(roomId).emit('player-left', {
@@ -91,14 +95,15 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
     console.log(`Socket ${socketId} left socket.io room ${roomId}`);
   }
 
-  // Clean up empty rooms
+  // Only clean up if room is actually empty
   if (freshRoomState.players.length === 0) {
     activeRooms.delete(roomId);
     console.log(`Room ${roomId} is now empty, removed from memory`);
+    // Only cleanup empty rooms in database if room is actually empty
+    await cleanupEmptyRooms();
+  } else {
+    console.log(`Room ${roomId} still has ${freshRoomState.players.length} players, not cleaning up`);
   }
-
-  // Periodic cleanup of empty rooms in database
-  await cleanupEmptyRooms();
 }
 
 export function initializeRoomHandlers(io: Server): void {
