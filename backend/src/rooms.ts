@@ -128,8 +128,8 @@ export function initializeRoomHandlers(io: Server): void {
         // Create room in database
         const room = await createRoom(passphrase);
 
-        // Add creator as first player
-        await addPlayerToRoom(room.id, socket.id);
+        // Add creator as first player (with name if provided)
+        await addPlayerToRoom(room.id, socket.id, name?.trim() || undefined);
 
         // Fetch FRESH room state from database (single source of truth)
         const freshRoomState = await getRoomWithPlayers(room.id);
