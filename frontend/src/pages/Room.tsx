@@ -70,12 +70,17 @@ export function Room() {
 
     return () => {
       clearTimeout(joinTimeout);
-      // Don't remove event listeners on cleanup - keep them active to receive events
-      // The socket connection is shared across the app, so removing listeners here
-      // could cause other components to miss events
-      // socket.off('join-room-response', handleJoinRoomResponse);
-      // socket.off('player-joined', handlePlayerJoined);
-      // socket.off('player-left', handlePlayerLeft);
+      // Remove event listeners to prevent memory leaks
+      // But use a small delay to ensure any in-flight events are processed
+      const cleanupTimeout = setTimeout(() => {
+        socket.off('join-room-response', handleJoinRoomResponse);
+        socket.off('player-joined', handlePlayerJoined);
+        socket.off('player-left', handlePlayerLeft);
+      }, 100);
+      
+      return () => {
+        clearTimeout(cleanupTimeout);
+      };
     };
   }, [socket, isConnected, passphrase]);
 

@@ -95,27 +95,17 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
   console.log(`Remaining players in database: ${freshRoomState.players.length}`, freshRoomState.players.map(p => ({ socketId: p.socket_id, name: p.name })));
   
   // Broadcast player left to all remaining players in the room (BEFORE removing socket from room)
-  // Use io.to() to send to ALL sockets in the room (not excluding the leaving socket)
-  // But exclude the leaving socket itself by using socket.to() instead of io.to()
+  // Use io.to() to send to ALL sockets in the room
+  // The leaving socket will receive it but that's okay - it can ignore it
   console.log(`Broadcasting player-left event to room ${roomId} (${freshRoomState.players.length} remaining players)`);
   
-  // Send to all sockets in the room EXCEPT the leaving socket
-  // This ensures the leaving player doesn't receive their own leave event
-  // but all other players in the room do receive it
-  if (socket) {
-    socket.to(roomId).emit('player-left', {
-      socketId: socketId,
-      room: formattedRoomState as any,
-    });
-    console.log(`Broadcasted player-left event using socket.to() to room ${roomId}. Room now has ${freshRoomState.players.length} players. Broadcast sent to ${socketsInRoomForBroadcast.length - 1} sockets (excluding leaving socket).`);
-  } else {
-    // If socket is not available (e.g., from disconnect), use io.to() to send to all
-    io.to(roomId).emit('player-left', {
-      socketId: socketId,
-      room: formattedRoomState as any,
-    });
-    console.log(`Broadcasted player-left event using io.to() to room ${roomId}. Room now has ${freshRoomState.players.length} players. Broadcast sent to ${socketsInRoomForBroadcast.length} sockets.`);
-  }
+  // Send to ALL sockets in the room using io.to()
+  // This ensures all players (including Player 2) receive the event
+  io.to(roomId).emit('player-left', {
+    socketId: socketId,
+    room: formattedRoomState as any,
+  });
+  console.log(`Broadcasted player-left event using io.to() to room ${roomId}. Room now has ${freshRoomState.players.length} players. Broadcast sent to ${socketsInRoomForBroadcast.length} sockets.`);
 
   // Remove socket from socket.io room AFTER broadcasting
   if (socket) {
