@@ -80,14 +80,16 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
   // Get list of sockets in room before broadcasting to verify who will receive it
   const socketsInRoomForBroadcast = await io.in(roomId).fetchSockets();
   console.log(`About to broadcast player-left to room ${roomId}. Sockets in room: ${socketsInRoomForBroadcast.length}`, socketsInRoomForBroadcast.map(s => s.id));
+  console.log(`Remaining players in database: ${freshRoomState.players.length}`, freshRoomState.players.map(p => ({ socketId: p.socket_id, name: p.name })));
   
   // Broadcast player left to all remaining players in the room (BEFORE removing socket from room)
+  // Use io.to() to send to ALL sockets in the room (not excluding the leaving socket)
   console.log(`Broadcasting player-left event to room ${roomId} (${freshRoomState.players.length} remaining players)`);
   io.to(roomId).emit('player-left', {
     socketId: socketId,
     room: formattedRoomState as any,
   });
-  console.log(`Broadcasted player-left event. Room now has ${freshRoomState.players.length} players`);
+  console.log(`Broadcasted player-left event. Room now has ${freshRoomState.players.length} players. Broadcast sent to ${socketsInRoomForBroadcast.length} sockets.`);
 
   // Remove socket from socket.io room AFTER broadcasting
   if (socket) {

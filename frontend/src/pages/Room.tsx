@@ -35,6 +35,7 @@ export function Room() {
     };
 
     const handlePlayerLeft = (event: PlayerLeftEvent) => {
+      console.log('Room component: Received player-left event', event);
       setRoomState(event.room);
     };
 
