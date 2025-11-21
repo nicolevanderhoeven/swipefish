@@ -265,7 +265,7 @@ export function initializeRoomHandlers(io: Server): void {
         });
         console.log(`Sent join-room-response to ${socket.id} with ${freshRoomState.players.length} players`);
 
-        // Broadcast to all other players in the room with fresh state
+        // Broadcast to ALL players in the room (including Player 1 if they're still connected)
         // Find the player that just joined for the broadcast
         const joinedPlayer = freshRoomState.players.find((p) => p.socket_id === socket.id);
         
@@ -273,8 +273,13 @@ export function initializeRoomHandlers(io: Server): void {
         const socketsInRoomForBroadcast = await io.in(room.id).fetchSockets();
         console.log(`About to broadcast player-joined to room ${room.id}. Sockets in room: ${socketsInRoomForBroadcast.length}`, socketsInRoomForBroadcast.map(s => s.id));
         
+        // Also check which players are in the database but might not have sockets in the room
+        const allPlayerSocketIds = freshRoomState.players.map(p => p.socket_id);
+        console.log(`All player socket IDs in database: ${allPlayerSocketIds.join(', ')}`);
+        
         if (joinedPlayer) {
-          console.log(`Broadcasting player-joined event to room ${room.id} for player ${socket.id}`);
+          console.log(`Broadcasting player-joined event to room ${room.id} for player ${socket.id} (name: ${joinedPlayer.name || 'none'})`);
+          // Use io.to() which sends to ALL sockets in the room (not just excluding the sender)
           io.to(room.id).emit('player-joined', {
             player: {
               ...joinedPlayer,

@@ -4,6 +4,7 @@ import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
 import { PlayerList } from '../components/PlayerList';
 import { RoomState, PlayerJoinedEvent, PlayerLeftEvent, JoinRoomResponse } from '../types';
+import { getPlayerName } from '../utils/playerName';
 import './Room.css';
 
 export function Room() {
@@ -41,16 +42,27 @@ export function Room() {
     socket.on('player-joined', handlePlayerJoined);
     socket.on('player-left', handlePlayerLeft);
 
-    // Join the room (with a small delay to ensure socket is ready)
-    // Only join if we haven't already received a response
+    // Always join the room (with a small delay to ensure socket is ready)
+    // This ensures the socket is in the socket.io room to receive broadcasts
+    // Even if the player already created the room, we need to rejoin to ensure
+    // we're in the socket.io room for receiving player-joined/player-left events
     const joinTimeout = setTimeout(() => {
       if (!hasJoined) {
         console.log(`Room component: Joining room with passphrase ${passphrase}`);
+        const playerName = getPlayerName();
         socket.emit('join-room', {
           passphrase,
+          name: playerName.trim() || undefined,
         });
       } else {
-        console.log(`Room component: Already joined, skipping join-room emit`);
+        // Even if we've already joined, we should rejoin to ensure socket.io room membership
+        // This is safe because the backend handles duplicate joins gracefully
+        console.log(`Room component: Rejoining room to ensure socket.io room membership`);
+        const playerName = getPlayerName();
+        socket.emit('join-room', {
+          passphrase,
+          name: playerName.trim() || undefined,
+        });
       }
     }, 100);
 
