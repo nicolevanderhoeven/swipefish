@@ -9,9 +9,13 @@ export function initDatabase(connectionString: string): void {
     return;
   }
 
+  // For internal cluster connections, disable SSL
+  // Only use SSL if explicitly required in connection string
+  const useSSL = connectionString.includes('sslmode=require') || connectionString.includes('ssl=true');
+  
   pool = new Pool({
     connectionString,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    ssl: useSSL ? { rejectUnauthorized: false } : false,
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
