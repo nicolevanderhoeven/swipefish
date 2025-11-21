@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
@@ -13,31 +13,36 @@ export function Room() {
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const hasJoinedRef = useRef(false);
+
+  // Use useCallback to stabilize handler functions so they can be properly removed
+  const handleJoinRoomResponse = useCallback((response: JoinRoomResponse) => {
+    hasJoinedRef.current = true;
+    if (response.success && response.room) {
+      setRoomState(response.room);
+      setError(null);
+    } else {
+      setError(response.error || 'Failed to join room');
+    }
+  }, []);
+
+  const handlePlayerJoined = useCallback((event: PlayerJoinedEvent) => {
+    console.log('Room component: Received player-joined event', event);
+    setRoomState(event.room);
+  }, []);
+
+  const handlePlayerLeft = useCallback((event: PlayerLeftEvent) => {
+    console.log('Room component: Received player-left event', event);
+    setRoomState(event.room);
+  }, []);
 
   useEffect(() => {
     if (!socket || !isConnected || !passphrase) return;
 
-    let hasJoined = false;
-
-    const handleJoinRoomResponse = (response: JoinRoomResponse) => {
-      hasJoined = true;
-      if (response.success && response.room) {
-        setRoomState(response.room);
-        setError(null);
-      } else {
-        setError(response.error || 'Failed to join room');
-      }
-    };
-
-    const handlePlayerJoined = (event: PlayerJoinedEvent) => {
-      console.log('Room component: Received player-joined event', event);
-      setRoomState(event.room);
-    };
-
-    const handlePlayerLeft = (event: PlayerLeftEvent) => {
-      console.log('Room component: Received player-left event', event);
-      setRoomState(event.room);
-    };
+    // Set up event listeners FIRST, before joining, to ensure we don't miss any events
+    socket.on('join-room-response', handleJoinRoomResponse);
+    socket.on('player-joined', handlePlayerJoined);
+    socket.on('player-left', handlePlayerLeft);
 
     // Set up event listeners FIRST, before joining, to ensure we don't miss any events
     socket.on('join-room-response', handleJoinRoomResponse);
@@ -49,7 +54,7 @@ export function Room() {
     // Even if the player already created the room, we need to rejoin to ensure
     // we're in the socket.io room for receiving player-joined/player-left events
     const joinTimeout = setTimeout(() => {
-      if (!hasJoined) {
+      if (!hasJoinedRef.current) {
         console.log(`Room component: Joining room with passphrase ${passphrase}`);
         const playerName = getPlayerName();
         socket.emit('join-room', {
@@ -70,19 +75,12 @@ export function Room() {
 
     return () => {
       clearTimeout(joinTimeout);
-      // Remove event listeners to prevent memory leaks
-      // But use a small delay to ensure any in-flight events are processed
-      const cleanupTimeout = setTimeout(() => {
-        socket.off('join-room-response', handleJoinRoomResponse);
-        socket.off('player-joined', handlePlayerJoined);
-        socket.off('player-left', handlePlayerLeft);
-      }, 100);
-      
-      return () => {
-        clearTimeout(cleanupTimeout);
-      };
+      // Remove event listeners using the stable callback references
+      socket.off('join-room-response', handleJoinRoomResponse);
+      socket.off('player-joined', handlePlayerJoined);
+      socket.off('player-left', handlePlayerLeft);
     };
-  }, [socket, isConnected, passphrase]);
+  }, [socket, isConnected, passphrase, handleJoinRoomResponse, handlePlayerJoined, handlePlayerLeft]);
 
   const handleLeaveRoom = () => {
     if (socket) {
