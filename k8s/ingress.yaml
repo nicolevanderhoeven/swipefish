@@ -6,6 +6,8 @@ metadata:
   annotations:
     # DigitalOcean Load Balancer annotations
     cert-manager.io/cluster-issuer: "letsencrypt-prod"  # If using cert-manager
+    # Allow HTTP for ACME challenge (don't force SSL redirect)
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
     # For WebSocket support
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
