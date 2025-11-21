@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: your-registry/swipefish-frontend:latest  # Update with your image
+        image: nvanderhoeven/swipefish-frontend:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80

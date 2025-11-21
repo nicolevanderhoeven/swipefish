@@ -10,5 +10,5 @@ data:
   CORS_ORIGIN: "*"
   
   # Frontend configuration
-  VITE_SOCKET_URL: "wss://your-domain.com"  # Update with your actual domain
+  VITE_SOCKET_URL: "wss://swipe.fish"
 

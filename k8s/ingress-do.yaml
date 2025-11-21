@@ -5,17 +5,16 @@ metadata:
   namespace: swipefish
   annotations:
     # DigitalOcean Load Balancer annotations
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # If using cert-manager
+    kubernetes.digitalocean.com/load-balancer-id: ""  # Will be auto-assigned
     # For WebSocket support
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/websocket-services: "backend"
-    # CORS (if needed at ingress level)
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    # SSL/TLS - Use DigitalOcean managed certificate
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # If using cert-manager
+    # Or use DO managed cert (see DEPLOYMENT.md)
 spec:
-  ingressClassName: nginx
-  # TLS configuration (will be set up with cert-manager or DO managed certs)
+  # TLS configuration
   tls:
   - hosts:
     - swipe.fish
@@ -34,7 +33,7 @@ spec:
               number: 80
       # Backend WebSocket - Socket.io endpoint
       - path: /socket.io
-        pathType: ImplementationSpecific
+        pathType: Prefix
         backend:
           service:
             name: backend

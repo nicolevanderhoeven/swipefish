@@ -4,7 +4,6 @@ import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
 import { PlayerList } from '../components/PlayerList';
 import { RoomState, PlayerJoinedEvent, PlayerLeftEvent, JoinRoomResponse } from '../types';
-import { getPlayerName } from '../utils/playerName';
 import './Room.css';
 
 export function Room() {
