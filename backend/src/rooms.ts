@@ -45,6 +45,13 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
     return;
   }
 
+  // Get room state BEFORE removing player to see who else is in the room
+  const roomStateBeforeRemoval = await getRoomWithPlayers(roomId);
+  console.log(`Room ${roomId} has ${roomStateBeforeRemoval?.players.length || 0} players before removing ${socketId}`);
+  if (roomStateBeforeRemoval) {
+    console.log(`Players before removal:`, roomStateBeforeRemoval.players.map(p => ({ socketId: p.socket_id, name: p.name })));
+  }
+
   // Remove player from database FIRST (single source of truth)
   await removePlayer(socketId);
   console.log(`Removed player ${socketId} from database`);
@@ -56,6 +63,11 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
     console.log(`Room ${roomId} not found after removing player`);
     activeRooms.delete(roomId);
     return;
+  }
+  
+  console.log(`Room ${roomId} has ${freshRoomState.players.length} players after removing ${socketId}`);
+  if (freshRoomState.players.length > 0) {
+    console.log(`Remaining players:`, freshRoomState.players.map(p => ({ socketId: p.socket_id, name: p.name })));
   }
 
   // Update in-memory cache with fresh data
