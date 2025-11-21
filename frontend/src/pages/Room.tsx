@@ -39,6 +39,7 @@ export function Room() {
       setRoomState(event.room);
     };
 
+    // Set up event listeners FIRST, before joining, to ensure we don't miss any events
     socket.on('join-room-response', handleJoinRoomResponse);
     socket.on('player-joined', handlePlayerJoined);
     socket.on('player-left', handlePlayerLeft);
@@ -69,9 +70,12 @@ export function Room() {
 
     return () => {
       clearTimeout(joinTimeout);
-      socket.off('join-room-response', handleJoinRoomResponse);
-      socket.off('player-joined', handlePlayerJoined);
-      socket.off('player-left', handlePlayerLeft);
+      // Don't remove event listeners on cleanup - keep them active to receive events
+      // The socket connection is shared across the app, so removing listeners here
+      // could cause other components to miss events
+      // socket.off('join-room-response', handleJoinRoomResponse);
+      // socket.off('player-joined', handlePlayerJoined);
+      // socket.off('player-left', handlePlayerLeft);
     };
   }, [socket, isConnected, passphrase]);
 
