@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSocket } from '../hooks/useSocket';
+import { useSocket } from '../contexts/SocketContext';
+import { Logo } from '../components/Logo';
 import { CreateRoomResponse } from '../types';
 import './CreateRoom.css';
 
 export function CreateRoom() {
   const { socket, isConnected, error: socketError } = useSocket();
   const [loading, setLoading] = useState(false);
-  const [passphrase, setPassphrase] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -17,11 +17,10 @@ export function CreateRoom() {
     const handleCreateRoomResponse = (response: CreateRoomResponse) => {
       setLoading(false);
       if (response.success && response.passphrase) {
-        setPassphrase(response.passphrase);
-        // Navigate to room after a short delay
+        // Small delay to ensure backend has processed everything
         setTimeout(() => {
           navigate(`/room/${response.passphrase}`);
-        }, 2000);
+        }, 100);
       } else {
         setError(response.error || 'Failed to create room');
       }
@@ -29,25 +28,21 @@ export function CreateRoom() {
 
     socket.on('create-room-response', handleCreateRoomResponse);
 
+    // Automatically create room when component mounts and socket is connected
+    if (socket && isConnected && !loading && !error) {
+      setLoading(true);
+      socket.emit('create-room');
+    }
+
     return () => {
       socket.off('create-room-response', handleCreateRoomResponse);
     };
-  }, [socket, isConnected, navigate]);
-
-  const handleCreateRoom = () => {
-    if (!socket || !isConnected) {
-      setError('Not connected to server');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    socket.emit('create-room');
-  };
+  }, [socket, isConnected, navigate, loading, error]);
 
   if (socketError) {
     return (
       <div className="create-room-page">
+        <Logo />
         <div className="create-room-content">
           <h1>Connection Error</h1>
           <p>{socketError}</p>
@@ -57,39 +52,23 @@ export function CreateRoom() {
     );
   }
 
-  if (passphrase) {
-    return (
-      <div className="create-room-page">
-        <div className="create-room-content">
-          <h1>Room Created!</h1>
-          <div className="passphrase-display">
-            <p className="passphrase-label">Share this passphrase:</p>
-            <p className="passphrase-value">{passphrase}</p>
-          </div>
-          <p className="redirect-message">Redirecting to room...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="create-room-page">
+      <Logo />
       <div className="create-room-content">
-        <h1>Create Room</h1>
-        {error && <div className="error-message">{error}</div>}
-        <button
-          className="create-button"
-          onClick={handleCreateRoom}
-          disabled={loading || !isConnected}
-        >
-          {loading ? 'Creating...' : 'Create Room'}
-        </button>
-        <button
-          className="back-button"
-          onClick={() => navigate('/')}
-        >
-          Back
-        </button>
+        <h1>Creating Room...</h1>
+        {error && (
+          <>
+            <div className="error-message">{error}</div>
+            <button
+              className="back-button"
+              onClick={() => navigate('/')}
+            >
+              Go Back
+            </button>
+          </>
+        )}
+        {!error && <p>Please wait while we create your room...</p>}
       </div>
     </div>
   );

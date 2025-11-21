@@ -5,6 +5,7 @@
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 1rem;
+  position: relative;
 }
 
 .room-content {
@@ -21,7 +22,65 @@
   color: #333;
   font-size: 1.75rem;
   text-align: center;
+}
+
+.passphrase-section {
+  margin: 0 0 2rem 0;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px solid #667eea;
+}
+
+.passphrase-label {
+  margin: 0 0 0.75rem 0;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.passphrase-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.passphrase-value {
+  flex: 1;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #667eea;
+  font-family: monospace;
   word-break: break-all;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.copy-button {
+  padding: 0.75rem 1rem;
+  font-size: 1.25rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  min-width: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-button:hover {
+  background: #5568d3;
+}
+
+.copy-button:active {
+  transform: scale(0.95);
 }
 
 .error-message {

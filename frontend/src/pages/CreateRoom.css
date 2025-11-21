@@ -5,6 +5,7 @@
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 1rem;
+  position: relative;
 }
 
 .create-room-content {
@@ -18,9 +19,16 @@
 }
 
 .create-room-content h1 {
-  margin: 0 0 2rem 0;
+  margin: 0 0 1rem 0;
   color: #333;
   font-size: 2rem;
+  text-align: center;
+}
+
+.create-room-content p {
+  text-align: center;
+  color: #666;
+  margin: 1rem 0;
 }
 
 .passphrase-display {

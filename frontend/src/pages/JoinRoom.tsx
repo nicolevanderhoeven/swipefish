@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSocket } from '../hooks/useSocket';
+import { useSocket } from '../contexts/SocketContext';
+import { Logo } from '../components/Logo';
 import { JoinRoomResponse } from '../types';
 import './JoinRoom.css';
 
@@ -56,6 +57,7 @@ export function JoinRoom() {
   if (socketError) {
     return (
       <div className="join-room-page">
+        <Logo />
         <div className="join-room-content">
           <h1>Connection Error</h1>
           <p>{socketError}</p>
@@ -67,6 +69,7 @@ export function JoinRoom() {
 
   return (
     <div className="join-room-page">
+      <Logo />
       <div className="join-room-content">
         <h1>Join Room</h1>
         <form onSubmit={handleSubmit}>

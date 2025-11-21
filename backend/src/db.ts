@@ -4,20 +4,51 @@ import { Room, Player } from './types';
 let pool: Pool | null = null;
 
 export function initDatabase(connectionString: string): void {
+  if (pool) {
+    console.log('Database already initialized, reusing existing pool');
+    return;
+  }
+
   pool = new Pool({
     connectionString,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
   });
 
   pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
+    // Don't set pool to null on error - let it try to reconnect
   });
+
+  pool.on('connect', () => {
+    console.log('Database client connected');
+  });
+
+  console.log('Database pool initialized');
+}
+
+function ensurePoolInitialized(): Pool {
+  if (!pool) {
+    console.error('Database pool is null! Attempting to reinitialize...');
+    const databaseUrl = process.env.DATABASE_URL;
+    if (databaseUrl) {
+      initDatabase(databaseUrl);
+    } else {
+      throw new Error('Database not initialized and DATABASE_URL not available');
+    }
+  }
+  if (!pool) {
+    throw new Error('Failed to initialize database pool');
+  }
+  return pool;
 }
 
 export async function createTables(): Promise<void> {
-  if (!pool) throw new Error('Database not initialized');
+  const dbPool = ensurePoolInitialized();
 
-  await pool.query(`
+  await dbPool.query(`
     CREATE TABLE IF NOT EXISTS rooms (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       passphrase VARCHAR(255) UNIQUE NOT NULL,
@@ -26,7 +57,7 @@ export async function createTables(): Promise<void> {
     )
   `);
 
-  await pool.query(`
+  await dbPool.query(`
     CREATE TABLE IF NOT EXISTS players (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
@@ -37,19 +68,19 @@ export async function createTables(): Promise<void> {
     )
   `);
 
-  await pool.query(`
+  await dbPool.query(`
     CREATE INDEX IF NOT EXISTS idx_players_room_id ON players(room_id)
   `);
 
-  await pool.query(`
+  await dbPool.query(`
     CREATE INDEX IF NOT EXISTS idx_rooms_passphrase ON rooms(passphrase)
   `);
 }
 
 export async function createRoom(passphrase: string): Promise<Room> {
-  if (!pool) throw new Error('Database not initialized');
+  const dbPool = ensurePoolInitialized();
 
-  const result = await pool.query<Room>(
+  const result = await dbPool.query<Room>(
     'INSERT INTO rooms (passphrase) VALUES ($1) RETURNING *',
     [passphrase]
   );
@@ -58,20 +89,25 @@ export async function createRoom(passphrase: string): Promise<Room> {
 }
 
 export async function findRoomByPassphrase(passphrase: string): Promise<Room | null> {
-  if (!pool) throw new Error('Database not initialized');
+  const dbPool = ensurePoolInitialized();
 
-  const result = await pool.query<Room>(
-    'SELECT * FROM rooms WHERE passphrase = $1',
-    [passphrase]
-  );
+  try {
+    const result = await dbPool.query<Room>(
+      'SELECT * FROM rooms WHERE passphrase = $1',
+      [passphrase]
+    );
 
-  return result.rows[0] || null;
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Error finding room by passphrase:', error);
+    throw error;
+  }
 }
 
 export async function checkPassphraseExists(passphrase: string): Promise<boolean> {
-  if (!pool) throw new Error('Database not initialized');
+  const dbPool = ensurePoolInitialized();
 
-  const result = await pool.query(
+  const result = await dbPool.query(
     'SELECT 1 FROM rooms WHERE passphrase = $1 LIMIT 1',
     [passphrase]
   );
@@ -80,9 +116,9 @@ export async function checkPassphraseExists(passphrase: string): Promise<boolean
 }
 
 export async function addPlayerToRoom(roomId: string, socketId: string, name?: string): Promise<Player> {
-  if (!pool) throw new Error('Database not initialized');
+  const dbPool = ensurePoolInitialized();
 
-  const result = await pool.query<Player>(
+  const result = await dbPool.query<Player>(
     `INSERT INTO players (room_id, socket_id, name) 
      VALUES ($1, $2, $3) 
      ON CONFLICT (room_id, socket_id) 
@@ -95,9 +131,9 @@ export async function addPlayerToRoom(roomId: string, socketId: string, name?: s
 }
 
 export async function getPlayersInRoom(roomId: string): Promise<Player[]> {
-  if (!pool) throw new Error('Database not initialized');
+  const dbPool = ensurePoolInitialized();
 
-  const result = await pool.query<Player>(
+  const result = await dbPool.query<Player>(
     'SELECT * FROM players WHERE room_id = $1 ORDER BY joined_at',
     [roomId]
   );
@@ -106,15 +142,15 @@ export async function getPlayersInRoom(roomId: string): Promise<Player[]> {
 }
 
 export async function removePlayer(socketId: string): Promise<void> {
-  if (!pool) throw new Error('Database not initialized');
+  const dbPool = ensurePoolInitialized();
 
-  await pool.query('DELETE FROM players WHERE socket_id = $1', [socketId]);
+  await dbPool.query('DELETE FROM players WHERE socket_id = $1', [socketId]);
 }
 
 export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; players: Player[] } | null> {
-  if (!pool) throw new Error('Database not initialized');
+  const dbPool = ensurePoolInitialized();
 
-  const roomResult = await pool.query<Room>(
+  const roomResult = await dbPool.query<Room>(
     'SELECT * FROM rooms WHERE id = $1',
     [roomId]
   );
@@ -130,9 +166,9 @@ export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; 
 }
 
 export async function cleanupEmptyRooms(): Promise<void> {
-  if (!pool) throw new Error('Database not initialized');
+  const dbPool = ensurePoolInitialized();
 
-  await pool.query(`
+  await dbPool.query(`
     DELETE FROM rooms 
     WHERE id NOT IN (SELECT DISTINCT room_id FROM players)
     AND status = 'waiting'

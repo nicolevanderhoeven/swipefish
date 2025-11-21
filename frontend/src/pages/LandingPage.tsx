@@ -7,6 +7,11 @@ export function LandingPage() {
   return (
     <div className="landing-page">
       <div className="landing-content">
+        <img 
+          src="/img/swipefish_logo.png" 
+          alt="Swipefish Logo" 
+          className="landing-logo"
+        />
         <h1 className="landing-title">Swipefish</h1>
         <p className="landing-subtitle">A social deduction game for 3 players</p>
         

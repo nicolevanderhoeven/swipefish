@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSocket } from '../hooks/useSocket';
+import { useSocket } from '../contexts/SocketContext';
+import { Logo } from '../components/Logo';
 import { PlayerList } from '../components/PlayerList';
 import { RoomState, PlayerJoinedEvent, PlayerLeftEvent, JoinRoomResponse } from '../types';
 import './Room.css';
@@ -15,10 +16,10 @@ export function Room() {
   useEffect(() => {
     if (!socket || !isConnected || !passphrase) return;
 
-    // Join the room
-    socket.emit('join-room', { passphrase });
+    let hasJoined = false;
 
     const handleJoinRoomResponse = (response: JoinRoomResponse) => {
+      hasJoined = true;
       if (response.success && response.room) {
         setRoomState(response.room);
         setError(null);
@@ -39,16 +40,32 @@ export function Room() {
     socket.on('player-joined', handlePlayerJoined);
     socket.on('player-left', handlePlayerLeft);
 
+    // Join the room (with a small delay to ensure socket is ready)
+    const joinTimeout = setTimeout(() => {
+      if (!hasJoined) {
+        socket.emit('join-room', { passphrase });
+      }
+    }, 100);
+
     return () => {
+      clearTimeout(joinTimeout);
       socket.off('join-room-response', handleJoinRoomResponse);
       socket.off('player-joined', handlePlayerJoined);
       socket.off('player-left', handlePlayerLeft);
     };
   }, [socket, isConnected, passphrase]);
 
+  const handleLeaveRoom = () => {
+    if (socket) {
+      socket.emit('leave-room');
+    }
+    navigate('/');
+  };
+
   if (socketError) {
     return (
       <div className="room-page">
+        <Logo onLeaveRoom={handleLeaveRoom} />
         <div className="room-content">
           <h1>Connection Error</h1>
           <p>{socketError}</p>
@@ -61,6 +78,7 @@ export function Room() {
   if (error && !roomState) {
     return (
       <div className="room-page">
+        <Logo onLeaveRoom={handleLeaveRoom} />
         <div className="room-content">
           <h1>Error</h1>
           <p>{error}</p>
@@ -73,6 +91,7 @@ export function Room() {
   if (!roomState) {
     return (
       <div className="room-page">
+        <Logo onLeaveRoom={handleLeaveRoom} />
         <div className="room-content">
           <p>Loading room...</p>
         </div>
@@ -80,10 +99,28 @@ export function Room() {
     );
   }
 
+  const copyPassphrase = () => {
+    if (roomState?.room.passphrase) {
+      navigator.clipboard.writeText(roomState.room.passphrase);
+      // You could add a toast notification here if desired
+    }
+  };
+
   return (
     <div className="room-page">
+      <Logo onLeaveRoom={handleLeaveRoom} />
       <div className="room-content">
-        <h1 className="room-title">Room: {roomState.room.passphrase}</h1>
+        <h1 className="room-title">Room</h1>
+        
+        <div className="passphrase-section">
+          <p className="passphrase-label">Room Passphrase (share this to invite players):</p>
+          <div className="passphrase-container">
+            <p className="passphrase-value">{roomState.room.passphrase}</p>
+            <button className="copy-button" onClick={copyPassphrase} title="Copy to clipboard">
+              📋
+            </button>
+          </div>
+        </div>
         
         {error && <div className="error-message">{error}</div>}
         
@@ -95,7 +132,13 @@ export function Room() {
         <div className="room-actions">
           <button
             className="back-button"
-            onClick={() => navigate('/')}
+            onClick={() => {
+              // Emit leave-room event before navigating
+              if (socket) {
+                socket.emit('leave-room');
+              }
+              navigate('/');
+            }}
           >
             Leave Room
           </button>

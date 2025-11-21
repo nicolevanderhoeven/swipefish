@@ -1,0 +1,29 @@
+.logo-header {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  max-width: 120px;
+  width: auto;
+  height: auto;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 10;
+}
+
+.logo-header:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
+}
+
+.logo-header:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 480px) {
+  .logo-header {
+    max-width: 80px;
+    top: 0.75rem;
+    left: 0.75rem;
+  }
+}
+

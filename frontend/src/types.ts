@@ -21,6 +21,7 @@ export interface RoomState {
 export interface CreateRoomResponse {
   success: boolean;
   passphrase?: string;
+  room?: RoomState;
   error?: string;
 }
 
