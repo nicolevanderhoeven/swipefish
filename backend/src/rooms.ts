@@ -8,6 +8,7 @@ import {
   removePlayer,
   cleanupEmptyRooms,
   getPlayersInRoom,
+  ensurePoolInitialized,
 } from './db';
 import { generatePassphrase } from './passphrase';
 import { RoomState } from './types';
@@ -16,45 +17,59 @@ import { RoomState } from './types';
 const activeRooms = new Map<string, RoomState>();
 
 async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socket): Promise<void> {
-  // Find which room this player is in
+  // Find which room this player is in by checking database (single source of truth)
+  // First, find the player in the database to get their room_id
+  const dbPool = ensurePoolInitialized();
+  
   let roomId: string | null = null;
-  let roomState: RoomState | null = null;
-
-  for (const [id, state] of activeRooms.entries()) {
-    const playerIndex = state.players.findIndex((p) => p.socket_id === socketId);
-    if (playerIndex !== -1) {
-      roomId = id;
-      roomState = state;
-      break;
+  
+  try {
+    const playerResult = await dbPool.query(
+      'SELECT room_id FROM players WHERE socket_id = $1 LIMIT 1',
+      [socketId]
+    );
+    
+    if (playerResult.rows.length === 0) {
+      // Player not in any room
+      console.log(`Player ${socketId} not found in any room`);
+      return;
     }
-  }
-
-  if (!roomId || !roomState) {
-    // Player not in any room, just remove from database
-    await removePlayer(socketId);
+    
+    roomId = playerResult.rows[0].room_id;
+  } catch (error) {
+    console.error('Error finding player room:', error);
     return;
   }
 
-  // Remove player from database
+  if (!roomId) {
+    return;
+  }
+
+  // Remove player from database FIRST (single source of truth)
   await removePlayer(socketId);
   console.log(`Removed player ${socketId} from database`);
 
-  // Remove player from in-memory state
-  const playerIndex = roomState.players.findIndex((p) => p.socket_id === socketId);
-  if (playerIndex !== -1) {
-    roomState.players.splice(playerIndex, 1);
-    console.log(`Removed player from in-memory state. Remaining players: ${roomState.players.length}`);
+  // Fetch FRESH room state from database (single source of truth)
+  const freshRoomState = await getRoomWithPlayers(roomId);
+  
+  if (!freshRoomState) {
+    console.log(`Room ${roomId} not found after removing player`);
+    activeRooms.delete(roomId);
+    return;
   }
+
+  // Update in-memory cache with fresh data
+  activeRooms.set(roomId, freshRoomState);
 
   // Format room state for JSON serialization (convert dates to strings)
   const formattedRoomState: RoomState = {
     room: {
-      ...roomState.room,
-      created_at: roomState.room.created_at instanceof Date 
-        ? roomState.room.created_at.toISOString() 
-        : (roomState.room.created_at as any),
+      ...freshRoomState.room,
+      created_at: freshRoomState.room.created_at instanceof Date 
+        ? freshRoomState.room.created_at.toISOString() 
+        : (freshRoomState.room.created_at as any),
     },
-    players: roomState.players.map(p => ({
+    players: freshRoomState.players.map(p => ({
       ...p,
       joined_at: p.joined_at instanceof Date 
         ? p.joined_at.toISOString() 
@@ -63,12 +78,12 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
   };
 
   // Broadcast player left to all remaining players in the room (BEFORE removing socket from room)
-  console.log(`Broadcasting player-left event to room ${roomId} (${roomState.players.length} remaining players)`);
+  console.log(`Broadcasting player-left event to room ${roomId} (${freshRoomState.players.length} remaining players)`);
   io.to(roomId).emit('player-left', {
     socketId: socketId,
     room: formattedRoomState as any,
   });
-  console.log(`Broadcasted player-left event. Room now has ${roomState.players.length} players`);
+  console.log(`Broadcasted player-left event. Room now has ${freshRoomState.players.length} players`);
 
   // Remove socket from socket.io room AFTER broadcasting
   if (socket) {
@@ -77,7 +92,7 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
   }
 
   // Clean up empty rooms
-  if (roomState.players.length === 0) {
+  if (freshRoomState.players.length === 0) {
     activeRooms.delete(roomId);
     console.log(`Room ${roomId} is now empty, removed from memory`);
   }
@@ -90,8 +105,11 @@ export function initializeRoomHandlers(io: Server): void {
   io.on('connection', (socket: Socket) => {
     console.log(`Client connected: ${socket.id}`);
 
-    socket.on('create-room', async () => {
+    socket.on('create-room', async (data: { name?: string } = {}) => {
       try {
+        const { name } = data;
+        console.log(`Create room request from ${socket.id} with name: ${name || 'none'}`);
+        
         // Generate unique passphrase
         let passphrase: string;
         let attempts = 0;
@@ -111,23 +129,47 @@ export function initializeRoomHandlers(io: Server): void {
         const room = await createRoom(passphrase);
 
         // Add creator as first player
-        const player = await addPlayerToRoom(room.id, socket.id);
+        await addPlayerToRoom(room.id, socket.id);
 
-        // Add to in-memory state
-        const roomState: RoomState = {
-          room,
-          players: [player],
-        };
-        activeRooms.set(room.id, roomState);
+        // Fetch FRESH room state from database (single source of truth)
+        const freshRoomState = await getRoomWithPlayers(room.id);
+        
+        if (!freshRoomState) {
+          console.error('Failed to load room state after creation');
+          socket.emit('create-room-response', {
+            success: false,
+            error: 'Failed to create room',
+          });
+          return;
+        }
+
+        // Update in-memory cache with fresh data
+        activeRooms.set(room.id, freshRoomState);
 
         // Join socket room for this game room
         socket.join(room.id);
 
-        // Send response with full room state
+        // Format room state for JSON serialization
+        const formattedRoomState: RoomState = {
+          room: {
+            ...freshRoomState.room,
+            created_at: freshRoomState.room.created_at instanceof Date 
+              ? freshRoomState.room.created_at.toISOString() 
+              : (freshRoomState.room.created_at as any),
+          },
+          players: freshRoomState.players.map(p => ({
+            ...p,
+            joined_at: p.joined_at instanceof Date 
+              ? p.joined_at.toISOString() 
+              : (p.joined_at as any),
+          })),
+        };
+
+        // Send response with fresh room state
         socket.emit('create-room-response', {
           success: true,
           passphrase,
-          room: roomState,
+          room: formattedRoomState as any,
         });
       } catch (error) {
         console.error('Error creating room:', error);
@@ -166,51 +208,49 @@ export function initializeRoomHandlers(io: Server): void {
 
         console.log(`Found room ${room.id} for passphrase: ${passphrase}`);
 
-        // Add player to database
-        const player = await addPlayerToRoom(room.id, socket.id, name);
+        // Add player to database FIRST (single source of truth)
+        const player = await addPlayerToRoom(room.id, socket.id, name?.trim() || undefined);
         console.log(`Added player ${player.id} to room ${room.id}`);
 
-        // Update in-memory state
-        let roomState = activeRooms.get(room.id);
-        if (!roomState) {
-          console.log(`Room ${room.id} not in memory, loading from database`);
-          const dbRoomState = await getRoomWithPlayers(room.id);
-          if (dbRoomState) {
-            roomState = dbRoomState;
-            activeRooms.set(room.id, roomState);
-            console.log(`Loaded room state from database with ${roomState.players.length} players`);
-          } else {
-            console.error(`Failed to load room state from database for room ${room.id}`);
-            socket.emit('join-room-response', {
-              success: false,
-              error: 'Failed to load room state',
-            });
-            return;
-          }
+        // Fetch FRESH room state from database (single source of truth)
+        const freshRoomState = await getRoomWithPlayers(room.id);
+        
+        if (!freshRoomState) {
+          console.error(`Failed to load room state from database for room ${room.id}`);
+          socket.emit('join-room-response', {
+            success: false,
+            error: 'Failed to load room state',
+          });
+          return;
         }
 
-        // Add player to room state if not already present
-        const alreadyInRoom = roomState.players.find((p) => p.socket_id === socket.id);
+        // Update in-memory cache with fresh data from database
+        activeRooms.set(room.id, freshRoomState);
+        console.log(`Updated room state from database. Total players: ${freshRoomState.players.length}`);
+
+        // Check if player is already in room (for broadcast logic)
+        const alreadyInRoom = freshRoomState.players.find((p) => p.socket_id === socket.id);
         if (!alreadyInRoom) {
-          roomState.players.push(player);
-          console.log(`Added player to in-memory state. Total players: ${roomState.players.length}`);
-        } else {
-          console.log(`Player ${socket.id} already in room state`);
+          console.log(`Warning: Player ${socket.id} not found in fresh room state after adding`);
         }
 
-        // Join socket room
+        // Join socket room (if not already in it)
         socket.join(room.id);
         console.log(`Socket ${socket.id} joined socket.io room ${room.id}`);
+        
+        // Verify socket is in the room by checking room membership
+        const socketsInRoom = await io.in(room.id).fetchSockets();
+        console.log(`Room ${room.id} now has ${socketsInRoom.length} sockets:`, socketsInRoom.map(s => s.id));
 
-        // Format room state for JSON serialization (convert dates to strings)
+        // Format fresh room state for JSON serialization (convert dates to strings)
         const formattedRoomState: RoomState = {
           room: {
-            ...roomState.room,
-            created_at: roomState.room.created_at instanceof Date 
-              ? roomState.room.created_at.toISOString() 
-              : (roomState.room.created_at as any),
+            ...freshRoomState.room,
+            created_at: freshRoomState.room.created_at instanceof Date 
+              ? freshRoomState.room.created_at.toISOString() 
+              : (freshRoomState.room.created_at as any),
           },
-          players: roomState.players.map(p => ({
+          players: freshRoomState.players.map(p => ({
             ...p,
             joined_at: p.joined_at instanceof Date 
               ? p.joined_at.toISOString() 
@@ -218,41 +258,46 @@ export function initializeRoomHandlers(io: Server): void {
           })),
         };
 
-        // Notify the joining player
+        // Notify the joining player with fresh state
         socket.emit('join-room-response', {
           success: true,
           room: formattedRoomState as any,
         });
-        console.log(`Sent join-room-response to ${socket.id}`);
+        console.log(`Sent join-room-response to ${socket.id} with ${freshRoomState.players.length} players`);
 
-        // Only broadcast if this is a new player joining (not the creator)
-        if (!alreadyInRoom) {
-          // Format room state for JSON serialization
-          const formattedRoomStateForBroadcast: RoomState = {
-            room: {
-              ...roomState.room,
-              created_at: roomState.room.created_at instanceof Date 
-                ? roomState.room.created_at.toISOString() 
-                : (roomState.room.created_at as any),
-            },
-            players: roomState.players.map(p => ({
-              ...p,
-              joined_at: p.joined_at instanceof Date 
-                ? p.joined_at.toISOString() 
-                : (p.joined_at as any),
-            })),
-          };
-          
+        // Broadcast to all other players in the room with fresh state
+        // Find the player that just joined for the broadcast
+        const joinedPlayer = freshRoomState.players.find((p) => p.socket_id === socket.id);
+        
+        // Get list of sockets in room before broadcasting to verify who will receive it
+        const socketsInRoomForBroadcast = await io.in(room.id).fetchSockets();
+        console.log(`About to broadcast player-joined to room ${room.id}. Sockets in room: ${socketsInRoomForBroadcast.length}`, socketsInRoomForBroadcast.map(s => s.id));
+        
+        if (joinedPlayer) {
+          console.log(`Broadcasting player-joined event to room ${room.id} for player ${socket.id}`);
           io.to(room.id).emit('player-joined', {
             player: {
-              ...player,
-              joined_at: player.joined_at instanceof Date 
-                ? player.joined_at.toISOString() 
-                : (player.joined_at as any),
+              ...joinedPlayer,
+              joined_at: joinedPlayer.joined_at instanceof Date 
+                ? joinedPlayer.joined_at.toISOString() 
+                : (joinedPlayer.joined_at as any),
             },
-            room: formattedRoomStateForBroadcast as any,
+            room: formattedRoomState as any,
           });
-          console.log(`Broadcasted player-joined event to room ${room.id}`);
+          console.log(`Broadcasted player-joined event to room ${room.id} with ${freshRoomState.players.length} total players`);
+        } else {
+          console.log(`Warning: Could not find joined player ${socket.id} in room state, but broadcasting anyway`);
+          // Broadcast anyway with the fresh room state so all players stay in sync
+          io.to(room.id).emit('player-joined', {
+            player: {
+              id: 'unknown',
+              room_id: room.id,
+              name: null,
+              socket_id: socket.id,
+              joined_at: new Date().toISOString(),
+            },
+            room: formattedRoomState as any,
+          });
         }
       } catch (error) {
         console.error('Error joining room:', error);

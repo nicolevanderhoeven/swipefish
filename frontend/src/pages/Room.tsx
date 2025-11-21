@@ -4,6 +4,7 @@ import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
 import { PlayerList } from '../components/PlayerList';
 import { RoomState, PlayerJoinedEvent, PlayerLeftEvent, JoinRoomResponse } from '../types';
+import { getPlayerName } from '../utils/playerName';
 import './Room.css';
 
 export function Room() {
@@ -29,6 +30,7 @@ export function Room() {
     };
 
     const handlePlayerJoined = (event: PlayerJoinedEvent) => {
+      console.log('Room component: Received player-joined event', event);
       setRoomState(event.room);
     };
 
@@ -41,9 +43,15 @@ export function Room() {
     socket.on('player-left', handlePlayerLeft);
 
     // Join the room (with a small delay to ensure socket is ready)
+    // Only join if we haven't already received a response
     const joinTimeout = setTimeout(() => {
       if (!hasJoined) {
-        socket.emit('join-room', { passphrase });
+        console.log(`Room component: Joining room with passphrase ${passphrase}`);
+        socket.emit('join-room', {
+          passphrase,
+        });
+      } else {
+        console.log(`Room component: Already joined, skipping join-room emit`);
       }
     }, 100);
 

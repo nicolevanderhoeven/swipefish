@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
 import { JoinRoomResponse } from '../types';
+import { getPlayerName } from '../utils/playerName';
 import './JoinRoom.css';
 
 export function JoinRoom() {
   const { socket, isConnected, error: socketError } = useSocket();
   const [passphrase, setPassphrase] = useState('');
-  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -48,9 +48,10 @@ export function JoinRoom() {
 
     setLoading(true);
     setError(null);
+    const playerName = getPlayerName();
     socket.emit('join-room', {
       passphrase: trimmedPassphrase,
-      name: name.trim() || undefined,
+      name: playerName.trim() || undefined,
     });
   };
 
@@ -84,18 +85,6 @@ export function JoinRoom() {
               disabled={loading}
               autoComplete="off"
               autoFocus
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="name">Your Name (Optional)</label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your name"
-              disabled={loading}
-              autoComplete="name"
             />
           </div>
           {error && <div className="error-message">{error}</div>}

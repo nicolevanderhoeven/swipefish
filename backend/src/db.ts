@@ -29,7 +29,7 @@ export function initDatabase(connectionString: string): void {
   console.log('Database pool initialized');
 }
 
-function ensurePoolInitialized(): Pool {
+export function ensurePoolInitialized(): Pool {
   if (!pool) {
     console.error('Database pool is null! Attempting to reinitialize...');
     const databaseUrl = process.env.DATABASE_URL;
@@ -118,11 +118,29 @@ export async function checkPassphraseExists(passphrase: string): Promise<boolean
 export async function addPlayerToRoom(roomId: string, socketId: string, name?: string): Promise<Player> {
   const dbPool = ensurePoolInitialized();
 
+  // Check if player already exists
+  const existingPlayer = await dbPool.query<Player>(
+    'SELECT * FROM players WHERE room_id = $1 AND socket_id = $2',
+    [roomId, socketId]
+  );
+
+  if (existingPlayer.rows.length > 0) {
+    // Player already exists - only update name if a new name is explicitly provided
+    if (name !== undefined && name !== null && name.trim() !== '') {
+      const result = await dbPool.query<Player>(
+        'UPDATE players SET name = $1 WHERE room_id = $2 AND socket_id = $3 RETURNING *',
+        [name.trim(), roomId, socketId]
+      );
+      return result.rows[0];
+    }
+    // Return existing player without updating name
+    return existingPlayer.rows[0];
+  }
+
+  // New player - insert with name
   const result = await dbPool.query<Player>(
     `INSERT INTO players (room_id, socket_id, name) 
      VALUES ($1, $2, $3) 
-     ON CONFLICT (room_id, socket_id) 
-     DO UPDATE SET name = COALESCE(EXCLUDED.name, players.name)
      RETURNING *`,
     [roomId, socketId, name || null]
   );

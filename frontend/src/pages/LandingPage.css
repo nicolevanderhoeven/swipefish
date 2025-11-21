@@ -32,7 +32,51 @@
 .landing-subtitle {
   font-size: 1.25rem;
   color: rgba(255, 255, 255, 0.9);
-  margin: 0 0 3rem 0;
+  margin: 0 0 2rem 0;
+}
+
+.landing-form {
+  margin: 0 0 2rem 0;
+}
+
+.landing-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.landing-form label {
+  color: #ffffff !important;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.landing-input {
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #000000;
+  transition: border-color 0.2s, box-shadow 0.2s, color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.landing-input-fantasy {
+  color: #999999;
+}
+
+.landing-input:focus {
+  outline: none;
+  border-color: white;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+}
+
+.landing-input::placeholder {
+  color: #999999;
+  opacity: 0.8;
 }
 
 .landing-buttons {

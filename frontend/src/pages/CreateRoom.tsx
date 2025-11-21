@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
 import { CreateRoomResponse } from '../types';
+import { getPlayerName } from '../utils/playerName';
 import './CreateRoom.css';
 
 export function CreateRoom() {
@@ -31,7 +32,10 @@ export function CreateRoom() {
     // Automatically create room when component mounts and socket is connected
     if (socket && isConnected && !loading && !error) {
       setLoading(true);
-      socket.emit('create-room');
+      const playerName = getPlayerName();
+      socket.emit('create-room', {
+        name: playerName.trim() || undefined,
+      });
     }
 
     return () => {
