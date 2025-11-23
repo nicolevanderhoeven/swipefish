@@ -119,17 +119,17 @@ export async function checkPassphraseExists(passphrase: string): Promise<boolean
   return result.rows.length > 0;
 }
 
-export async function addPlayerToRoom(roomId: string, socketId: string, name?: string): Promise<Player> {
+export async function addPlayerToRoom(roomId: string, socketId: string, name?: string, io?: any): Promise<Player> {
   const dbPool = ensurePoolInitialized();
 
-  // Check if player already exists
+  // Check if player already exists with this socket_id
   const existingPlayer = await dbPool.query<Player>(
     'SELECT * FROM players WHERE room_id = $1 AND socket_id = $2',
     [roomId, socketId]
   );
 
   if (existingPlayer.rows.length > 0) {
-    // Player already exists - only update name if a new name is explicitly provided
+    // Player already exists with this socket_id - only update name if a new name is explicitly provided
     if (name !== undefined && name !== null && name.trim() !== '') {
       const result = await dbPool.query<Player>(
         'UPDATE players SET name = $1 WHERE room_id = $2 AND socket_id = $3 RETURNING *',
@@ -139,6 +139,30 @@ export async function addPlayerToRoom(roomId: string, socketId: string, name?: s
     }
     // Return existing player without updating name
     return existingPlayer.rows[0];
+  }
+
+  // Check if there's a player in this room with a disconnected socket (reconnection case)
+  // Only do this if we have access to io to check socket existence
+  if (io) {
+    const allPlayersInRoom = await dbPool.query<Player>(
+      'SELECT * FROM players WHERE room_id = $1',
+      [roomId]
+    );
+
+    // Find players with disconnected sockets
+    for (const oldPlayer of allPlayersInRoom.rows) {
+      const oldSocket = io.sockets.sockets.get(oldPlayer.socket_id);
+      if (!oldSocket && oldPlayer.socket_id !== socketId) {
+        // This player's socket is disconnected, and it's not the current socket
+        // This is likely a reconnection - update their socket_id
+        console.log(`Updating player ${oldPlayer.id} socket_id from ${oldPlayer.socket_id} to ${socketId} (reconnection)`);
+        const updateResult = await dbPool.query<Player>(
+          `UPDATE players SET socket_id = $1, name = COALESCE($2, name) WHERE room_id = $3 AND id = $4 RETURNING *`,
+          [socketId, name?.trim() || null, roomId, oldPlayer.id]
+        );
+        return updateResult.rows[0];
+      }
+    }
   }
 
   // New player - insert with name
