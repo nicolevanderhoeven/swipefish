@@ -143,18 +143,23 @@ export async function addPlayerToRoom(roomId: string, socketId: string, name?: s
 
   // Check if there's a player in this room with a disconnected socket (reconnection case)
   // Only do this if we have access to io to check socket existence
+  // IMPORTANT: Only update if there's exactly ONE player in the room total with a disconnected socket,
+  // AND the room has only one player. This ensures we're handling a reconnection, not a new player joining.
   if (io) {
     const allPlayersInRoom = await dbPool.query<Player>(
       'SELECT * FROM players WHERE room_id = $1',
       [roomId]
     );
 
-    // Find players with disconnected sockets
-    for (const oldPlayer of allPlayersInRoom.rows) {
+    // Only attempt reconnection update if there's exactly one player in the room
+    // This prevents overwriting Player 1's record when Player 2 joins
+    if (allPlayersInRoom.rows.length === 1) {
+      const oldPlayer = allPlayersInRoom.rows[0];
       const oldSocket = io.sockets.sockets.get(oldPlayer.socket_id);
+      
+      // If the old player's socket is disconnected and it's different from the new socket_id,
+      // this is likely a reconnection
       if (!oldSocket && oldPlayer.socket_id !== socketId) {
-        // This player's socket is disconnected, and it's not the current socket
-        // This is likely a reconnection - update their socket_id
         console.log(`Updating player ${oldPlayer.id} socket_id from ${oldPlayer.socket_id} to ${socketId} (reconnection)`);
         const updateResult = await dbPool.query<Player>(
           `UPDATE players SET socket_id = $1, name = COALESCE($2, name) WHERE room_id = $3 AND id = $4 RETURNING *`,
