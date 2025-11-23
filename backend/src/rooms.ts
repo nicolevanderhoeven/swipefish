@@ -167,7 +167,7 @@ export function initializeRoomHandlers(io: Server): void {
         const room = await createRoom(passphrase);
 
         // Add creator as first player (with name if provided)
-        await addPlayerToRoom(room.id, socket.id, name?.trim() || undefined, io);
+        await addPlayerToRoom(room.id, socket.id, name?.trim() || undefined);
 
         // Fetch FRESH room state from database (single source of truth)
         const freshRoomState = await getRoomWithPlayers(room.id);
@@ -252,8 +252,7 @@ export function initializeRoomHandlers(io: Server): void {
         console.log(`Found room ${room.id} for passphrase: ${passphrase}`);
 
         // Add player to database FIRST (single source of truth)
-        // Pass io to handle reconnection cases (updating socket_id for disconnected sockets)
-        const player = await addPlayerToRoom(room.id, socket.id, name?.trim() || undefined, io);
+        const player = await addPlayerToRoom(room.id, socket.id, name?.trim() || undefined);
         console.log(`Added player ${player.id} to room ${room.id}`);
 
         // Fetch FRESH room state from database (single source of truth)

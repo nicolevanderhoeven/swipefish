@@ -119,7 +119,7 @@ export async function checkPassphraseExists(passphrase: string): Promise<boolean
   return result.rows.length > 0;
 }
 
-export async function addPlayerToRoom(roomId: string, socketId: string, name?: string, io?: any): Promise<Player> {
+export async function addPlayerToRoom(roomId: string, socketId: string, name?: string): Promise<Player> {
   const dbPool = ensurePoolInitialized();
 
   // Check if player already exists with this socket_id
@@ -141,34 +141,10 @@ export async function addPlayerToRoom(roomId: string, socketId: string, name?: s
     return existingPlayer.rows[0];
   }
 
-  // Check if there's a player in this room with a disconnected socket (reconnection case)
-  // Only do this if we have access to io to check socket existence
-  // IMPORTANT: Only update if there's exactly ONE player in the room total with a disconnected socket,
-  // AND the room has only one player. This ensures we're handling a reconnection, not a new player joining.
-  if (io) {
-    const allPlayersInRoom = await dbPool.query<Player>(
-      'SELECT * FROM players WHERE room_id = $1',
-      [roomId]
-    );
-
-    // Only attempt reconnection update if there's exactly one player in the room
-    // This prevents overwriting Player 1's record when Player 2 joins
-    if (allPlayersInRoom.rows.length === 1) {
-      const oldPlayer = allPlayersInRoom.rows[0];
-      const oldSocket = io.sockets.sockets.get(oldPlayer.socket_id);
-      
-      // If the old player's socket is disconnected and it's different from the new socket_id,
-      // this is likely a reconnection
-      if (!oldSocket && oldPlayer.socket_id !== socketId) {
-        console.log(`Updating player ${oldPlayer.id} socket_id from ${oldPlayer.socket_id} to ${socketId} (reconnection)`);
-        const updateResult = await dbPool.query<Player>(
-          `UPDATE players SET socket_id = $1, name = COALESCE($2, name) WHERE room_id = $3 AND id = $4 RETURNING *`,
-          [socketId, name?.trim() || null, roomId, oldPlayer.id]
-        );
-        return updateResult.rows[0];
-      }
-    }
-  }
+  // NOTE: We don't handle reconnections here because it's too complex to determine
+  // if a new socket_id is a reconnection or a new player. Instead, we'll create
+  // a new player entry for each socket_id. Old disconnected players will be cleaned up
+  // when they leave or when the room is cleaned up.
 
   // New player - insert with name
   const result = await dbPool.query<Player>(
