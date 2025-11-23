@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
@@ -13,12 +13,11 @@ export function Room() {
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const hasJoinedRef = useRef(false);
 
   // Use useCallback to stabilize handler functions so they can be properly removed
   const handleJoinRoomResponse = useCallback((response: JoinRoomResponse) => {
-    hasJoinedRef.current = true;
     if (response.success && response.room) {
+      console.log('Room component: Updating room state from join-room-response', response.room);
       setRoomState(response.room);
       setError(null);
     } else {
@@ -58,18 +57,17 @@ export function Room() {
     socket.on('player-joined', handlePlayerJoined);
     socket.on('player-left', handlePlayerLeft);
 
-    // Only join the room if we haven't joined yet
-    // The create-room handler already joins the socket to the room, so we don't need to rejoin
-    // unless we're coming from a direct navigation to the room URL
+    // Always emit join-room when the component loads to ensure:
+    // 1. The socket is in the socket.io room (even if it reconnected)
+    // 2. We get the latest room state from the database
+    // 3. The backend knows we're still in the room
     const joinTimeout = setTimeout(() => {
-      if (!hasJoinedRef.current) {
-        console.log(`Room component: Joining room with passphrase ${passphrase}`);
-        const playerName = getPlayerName();
-        socket.emit('join-room', {
-          passphrase,
-          name: playerName.trim() || undefined,
-        });
-      }
+      console.log(`Room component: Joining room with passphrase ${passphrase}`);
+      const playerName = getPlayerName();
+      socket.emit('join-room', {
+        passphrase,
+        name: playerName.trim() || undefined,
+      });
     }, 100);
 
     return () => {
