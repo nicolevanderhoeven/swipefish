@@ -342,7 +342,10 @@ export function initializeRoomHandlers(io: Server): void {
           
           // Send directly to each player's socket by socket ID (from database)
           // This ensures all players receive the event even if their socket isn't in the socket.io room
+          // Also clean up disconnected players
           let sentCount = 0;
+          const disconnectedPlayerIds: string[] = [];
+          
           for (const player of freshRoomState.players) {
             // Don't send to the joining player (they already got join-room-response)
             if (player.socket_id === socket.id) {
@@ -354,7 +357,22 @@ export function initializeRoomHandlers(io: Server): void {
               sentCount++;
               console.log(`Sent player-joined event directly to socket ${player.socket_id}`);
             } else {
-              console.log(`Warning: Socket ${player.socket_id} not found (may have disconnected)`);
+              console.log(`Warning: Socket ${player.socket_id} not found (may have disconnected), will clean up`);
+              disconnectedPlayerIds.push(player.socket_id);
+            }
+          }
+          
+          // Clean up disconnected players from the database
+          if (disconnectedPlayerIds.length > 0) {
+            console.log(`Cleaning up ${disconnectedPlayerIds.length} disconnected players: ${disconnectedPlayerIds.join(', ')}`);
+            for (const disconnectedSocketId of disconnectedPlayerIds) {
+              await removePlayer(disconnectedSocketId);
+            }
+            // Fetch fresh room state after cleanup
+            const cleanedRoomState = await getRoomWithPlayers(room.id);
+            if (cleanedRoomState) {
+              activeRooms.set(room.id, cleanedRoomState);
+              console.log(`Room ${room.id} now has ${cleanedRoomState.players.length} players after cleanup`);
             }
           }
           
