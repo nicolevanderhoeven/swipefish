@@ -404,7 +404,25 @@ export function initializeRoomHandlers(io: Server): void {
             }
           }
           
-          // Also broadcast to the room as a fallback
+          // Also send to all sockets in the socket.io room (even if not in database)
+          // This handles cases where a socket is in the room but not in the database
+          // (e.g., if they reconnected with a new socket_id but are still in the room)
+          for (const socketInRoom of socketsInRoomForBroadcast) {
+            // Skip the joining socket
+            if (socketInRoom.id === socket.id) {
+              continue;
+            }
+            // Skip if we already sent to this socket (from database list)
+            if (freshRoomState.players.some(p => p.socket_id === socketInRoom.id)) {
+              continue;
+            }
+            // Send to this socket even though it's not in the database
+            socketInRoom.emit('player-joined', playerJoinedEvent);
+            sentCount++;
+            console.log(`Sent player-joined event to socket ${socketInRoom.id} (in room but not in database)`);
+          }
+          
+          // Also broadcast to the room as a final fallback
           io.to(room.id).emit('player-joined', playerJoinedEvent);
           
           console.log(`Broadcasted player-joined event to room ${room.id} with ${freshRoomState.players.length} total players. Sent directly to ${sentCount} sockets, also broadcast to room (${socketsInRoomForBroadcast.length} sockets in room).`);
