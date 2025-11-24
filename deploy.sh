@@ -2,8 +2,8 @@
 set -e
 
 # Configuration - UPDATE THESE VALUES
-DOCKER_HUB_USERNAME="your-dockerhub-username"  # UPDATE THIS
-EMAIL="your-email@example.com"  # UPDATE THIS
+DOCKER_HUB_USERNAME="nvanderhoeven"  # UPDATE THIS
+EMAIL="nicole@nicolevanderhoeven.com"  # UPDATE THIS
 
 echo "🚀 Starting deployment to swipe.fish"
 echo ""
@@ -27,7 +27,7 @@ kubectl apply -f k8s/cert-manager-issuer-updated.yaml
 echo ""
 echo "🏗️  Step 3: Building backend Docker image..."
 cd backend
-docker build -t ${DOCKER_HUB_USERNAME}/swipefish-backend:latest .
+docker build --platform=linux/amd64 -t ${DOCKER_HUB_USERNAME}/swipefish-backend:latest .
 echo "📤 Pushing backend image to Docker Hub..."
 docker push ${DOCKER_HUB_USERNAME}/swipefish-backend:latest
 cd ..
@@ -36,7 +36,7 @@ cd ..
 echo ""
 echo "🏗️  Step 4: Building frontend Docker image..."
 cd frontend
-docker build --build-arg VITE_SOCKET_URL=wss://swipe.fish -t ${DOCKER_HUB_USERNAME}/swipefish-frontend:latest .
+docker build --platform=linux/amd64 --build-arg VITE_SOCKET_URL=wss://swipe.fish -t ${DOCKER_HUB_USERNAME}/swipefish-frontend:latest .
 echo "📤 Pushing frontend image to Docker Hub..."
 docker push ${DOCKER_HUB_USERNAME}/swipefish-frontend:latest
 cd ..
@@ -74,15 +74,13 @@ kubectl apply -f k8s/postgres-statefulset.yaml
 echo "Waiting for PostgreSQL to be ready..."
 kubectl wait --for=condition=ready pod -l app=postgres -n swipefish --timeout=300s || echo "PostgreSQL not ready yet, continuing..."
 
-# Deploy backend
+# Deploy backend (includes service)
 echo "Deploying backend..."
 kubectl apply -f k8s/backend-deployment.yaml
-kubectl apply -f k8s/backend-service.yaml
 
-# Deploy frontend
+# Deploy frontend (includes service)
 echo "Deploying frontend..."
 kubectl apply -f k8s/frontend-deployment.yaml
-kubectl apply -f k8s/frontend-service.yaml
 
 # Deploy ingress
 echo "Deploying ingress..."
