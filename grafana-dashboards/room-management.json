@@ -1,0 +1,209 @@
+{
+  "dashboard": {
+    "title": "Swipefish - Room Management",
+    "uid": "swipefish-rooms",
+    "id": null,
+    "tags": ["swipefish", "rooms", "game"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+        "type": "stat",
+        "title": "Active Rooms",
+        "targets": [
+          {
+            "expr": "room_count_active",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "blue"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+        "type": "stat",
+        "title": "Total Players",
+        "targets": [
+          {
+            "expr": "sum(room_players_count)",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "blue"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+        "type": "stat",
+        "title": "Room Creation Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(room_created_total[5m]))",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "type": "timeseries",
+        "title": "Room Operations",
+        "targets": [
+          {
+            "expr": "sum(rate(room_created_total[5m]))",
+            "legendFormat": "Rooms Created",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          },
+          {
+            "expr": "sum(rate(room_joined_total[5m]))",
+            "legendFormat": "Players Joined",
+            "refId": "B",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          },
+          {
+            "expr": "sum(rate(room_left_total[5m]))",
+            "legendFormat": "Players Left",
+            "refId": "C",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "type": "timeseries",
+        "title": "Players Per Room Distribution",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(room_players_count_bucket[5m])) by (le))",
+            "legendFormat": "p50 players",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(room_players_count_bucket[5m])) by (le))",
+            "legendFormat": "p95 players",
+            "refId": "B",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          },
+          {
+            "expr": "max(room_players_count)",
+            "legendFormat": "max players",
+            "refId": "C",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+        "type": "table",
+        "title": "Room Operations by Type",
+        "targets": [
+          {
+            "expr": "sum by (operation) (rate(room_operation_duration_seconds_count[5m]))",
+            "format": "table",
+            "instant": true,
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "type": "logs",
+        "title": "Room Management Logs",
+        "targets": [
+          {
+            "expr": "{app=\"swipefish\", component=\"backend\"} |= \"room\"",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "loki"}
+          }
+        ],
+        "options": {
+          "dedupStrategy": "none",
+          "enableLogDetails": true,
+          "prettifyLogMessage": false,
+          "showCommonLabels": false,
+          "showLabels": false,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": false
+        }
+      },
+      {
+        "id": 8,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "type": "traces",
+        "title": "Room Operation Traces",
+        "targets": [
+          {
+            "queryType": "search",
+            "serviceName": "swipefish-backend",
+            "spanName": "create-room|join-room|leave-room",
+            "refId": "A",
+            "datasource": {"type": "tempo", "uid": "tempo"}
+          }
+        ]
+      }
+    ]
+  }
+}
+

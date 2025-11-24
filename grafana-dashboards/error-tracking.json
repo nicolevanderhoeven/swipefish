@@ -1,0 +1,227 @@
+{
+  "dashboard": {
+    "title": "Swipefish - Error Tracking",
+    "uid": "swipefish-errors",
+    "id": null,
+    "tags": ["swipefish", "errors", "monitoring"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+        "type": "stat",
+        "title": "Error Rate (5m)",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_request_duration_seconds_count{status_code=~\"5..\"}[5m]))",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 0.1, "color": "yellow"},
+                {"value": 1, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+        "type": "stat",
+        "title": "Total Errors (Last Hour)",
+        "targets": [
+          {
+            "expr": "sum(increase(http_server_request_duration_seconds_count{status_code=~\"5..\"}[1h]))",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 50, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+        "type": "stat",
+        "title": "4xx Error Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_request_duration_seconds_count{status_code=~\"4..\"}[5m]))",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 0.5, "color": "yellow"},
+                {"value": 2, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+        "type": "timeseries",
+        "title": "Error Rate Over Time",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_request_duration_seconds_count{status_code=~\"5..\"}[5m]))",
+            "legendFormat": "5xx Errors",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          },
+          {
+            "expr": "sum(rate(http_server_request_duration_seconds_count{status_code=~\"4..\"}[5m]))",
+            "legendFormat": "4xx Errors",
+            "refId": "B",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [1],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "execution": {
+            "alertRuleTags": {},
+            "annotations": {
+              "description": "Error rate is above 1 req/s",
+              "summary": "High error rate detected"
+            },
+            "for": "5m",
+            "noDataState": "NoData",
+            "notifications": []
+          },
+          "frequency": "10s",
+          "handler": 1,
+          "name": "High Error Rate",
+          "noDataState": "NoData",
+          "notifications": []
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "type": "logs",
+        "title": "Error Logs",
+        "targets": [
+          {
+            "expr": "{app=\"swipefish\", component=\"backend\"} |= \"error\" | json",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "loki"}
+          }
+        ],
+        "options": {
+          "dedupStrategy": "none",
+          "enableLogDetails": true,
+          "prettifyLogMessage": false,
+          "showCommonLabels": false,
+          "showLabels": false,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": false
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "type": "table",
+        "title": "Error Summary by Status Code",
+        "targets": [
+          {
+            "expr": "sum by (status_code) (rate(http_server_request_duration_seconds_count{status_code=~\"[45]..\"}[5m]))",
+            "format": "table",
+            "instant": true,
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 0.1, "color": "yellow"},
+                {"value": 1, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+        "type": "traces",
+        "title": "Error Traces",
+        "targets": [
+          {
+            "queryType": "search",
+            "serviceName": "swipefish-backend",
+            "tags": "status.code=ERROR",
+            "refId": "A",
+            "datasource": {"type": "tempo", "uid": "tempo"}
+          }
+        ]
+      }
+    ]
+  }
+}
+

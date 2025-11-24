@@ -1,0 +1,185 @@
+{
+  "dashboard": {
+    "title": "Swipefish - Application Overview",
+    "uid": "swipefish-overview",
+    "id": null,
+    "tags": ["swipefish", "overview"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "type": "stat",
+        "title": "Active Backend Pods",
+        "targets": [
+          {
+            "expr": "count(up{job=\"swipefish-backend\"} == 1)",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "yellow"},
+                {"value": 2, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "type": "stat",
+        "title": "HTTP Request Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_request_duration_seconds_count[5m]))",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "type": "timeseries",
+        "title": "HTTP Request Duration (p50, p95, p99)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p50",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p95",
+            "refId": "B",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "p99",
+            "refId": "C",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "type": "timeseries",
+        "title": "HTTP Error Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_request_duration_seconds_count{status_code=~\"5..\"}[5m]))",
+            "legendFormat": "5xx errors",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          },
+          {
+            "expr": "sum(rate(http_server_request_duration_seconds_count{status_code=~\"4..\"}[5m]))",
+            "legendFormat": "4xx errors",
+            "refId": "B",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+        "type": "logs",
+        "title": "Recent Application Logs",
+        "targets": [
+          {
+            "expr": "{app=\"swipefish\"}",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "loki"}
+          }
+        ],
+        "options": {
+          "dedupStrategy": "none",
+          "enableLogDetails": true,
+          "prettifyLogMessage": false,
+          "showCommonLabels": false,
+          "showLabels": false,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": false
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "type": "stat",
+        "title": "Total Traces (Last Hour)",
+        "targets": [
+          {
+            "queryType": "search",
+            "refId": "A",
+            "datasource": {"type": "tempo", "uid": "tempo"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "type": "stat",
+        "title": "Average Trace Duration",
+        "targets": [
+          {
+            "queryType": "search",
+            "refId": "A",
+            "datasource": {"type": "tempo", "uid": "tempo"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      }
+    ]
+  }
+}
+

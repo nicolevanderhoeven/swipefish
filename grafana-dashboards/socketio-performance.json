@@ -1,0 +1,190 @@
+{
+  "dashboard": {
+    "title": "Swipefish - Socket.io Performance",
+    "uid": "swipefish-socketio",
+    "id": null,
+    "tags": ["swipefish", "socketio", "performance"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+        "type": "stat",
+        "title": "Active Socket Connections",
+        "targets": [
+          {
+            "expr": "socket_io_connections_active",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "blue"},
+                {"value": 10, "color": "green"},
+                {"value": 50, "color": "yellow"},
+                {"value": 100, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+        "type": "stat",
+        "title": "Socket Events Per Second",
+        "targets": [
+          {
+            "expr": "sum(rate(socket_io_events_total[5m]))",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+        "type": "stat",
+        "title": "Socket Disconnections",
+        "targets": [
+          {
+            "expr": "sum(rate(socket_io_disconnections_total[5m]))",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "type": "timeseries",
+        "title": "Socket Event Types",
+        "targets": [
+          {
+            "expr": "sum by (event_type) (rate(socket_io_events_total[5m]))",
+            "legendFormat": "{{event_type}}",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "type": "timeseries",
+        "title": "Socket Connection Lifecycle",
+        "targets": [
+          {
+            "expr": "sum(rate(socket_io_connections_total[5m]))",
+            "legendFormat": "Connections",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          },
+          {
+            "expr": "sum(rate(socket_io_disconnections_total[5m]))",
+            "legendFormat": "Disconnections",
+            "refId": "B",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+        "type": "timeseries",
+        "title": "Socket Event Latency",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(socket_io_event_duration_seconds_bucket[5m])) by (le, event_type))",
+            "legendFormat": "p50 - {{event_type}}",
+            "refId": "A",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(socket_io_event_duration_seconds_bucket[5m])) by (le, event_type))",
+            "legendFormat": "p95 - {{event_type}}",
+            "refId": "B",
+            "datasource": {"type": "prometheus", "uid": "prometheus"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {"mode": "palette-classic"}
+          }
+        }
+      },
+      {
+        "id": 7,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "type": "logs",
+        "title": "Socket.io Logs",
+        "targets": [
+          {
+            "expr": "{app=\"swipefish\", component=\"backend\"} |= \"socket\"",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "loki"}
+          }
+        ],
+        "options": {
+          "dedupStrategy": "none",
+          "enableLogDetails": true,
+          "prettifyLogMessage": false,
+          "showCommonLabels": false,
+          "showLabels": false,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": false
+        }
+      },
+      {
+        "id": 8,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "type": "traces",
+        "title": "Socket.io Traces",
+        "targets": [
+          {
+            "queryType": "search",
+            "serviceName": "swipefish-backend",
+            "spanName": "socket.io.*",
+            "refId": "A",
+            "datasource": {"type": "tempo", "uid": "tempo"}
+          }
+        ]
+      }
+    ]
+  }
+}
+
