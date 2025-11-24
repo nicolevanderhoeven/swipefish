@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
 import { PlayerList } from '../components/PlayerList';
-import { RoomState, PlayerJoinedEvent, PlayerLeftEvent, JoinRoomResponse } from '../types';
+import { RoomState, PlayerJoinedEvent, PlayerLeftEvent, JoinRoomResponse, RoomStateSyncResponse } from '../types';
 import { getPlayerName } from '../utils/playerName';
 import './Room.css';
 
@@ -49,6 +49,24 @@ export function Room() {
     });
   }, []);
 
+  const handleRoomStateSync = useCallback((response: RoomStateSyncResponse) => {
+    if (response.success && response.room) {
+      console.log('Room component: Received room-state-sync', response.room);
+      setRoomState((prevState) => {
+        // Only update if the state actually changed (different player count or different player IDs)
+        const prevPlayerIds = prevState?.players.map(p => p.id).sort().join(',') || '';
+        const newPlayerIds = response.room.players.map(p => p.id).sort().join(',');
+        if (prevPlayerIds !== newPlayerIds || prevState?.players.length !== response.room.players.length) {
+          console.log('Room component: Room state changed, updating from sync');
+          return response.room;
+        }
+        return prevState;
+      });
+    } else {
+      console.log('Room component: Room state sync failed', response.error);
+    }
+  }, []);
+
   useEffect(() => {
     if (!socket || !isConnected || !passphrase) return;
 
@@ -56,6 +74,7 @@ export function Room() {
     socket.on('join-room-response', handleJoinRoomResponse);
     socket.on('player-joined', handlePlayerJoined);
     socket.on('player-left', handlePlayerLeft);
+    socket.on('room-state-sync', handleRoomStateSync);
 
     // Always emit join-room when the component loads to ensure:
     // 1. The socket is in the socket.io room (even if it reconnected)
@@ -76,8 +95,26 @@ export function Room() {
       socket.off('join-room-response', handleJoinRoomResponse);
       socket.off('player-joined', handlePlayerJoined);
       socket.off('player-left', handlePlayerLeft);
+      socket.off('room-state-sync', handleRoomStateSync);
     };
-  }, [socket, isConnected, passphrase, handleJoinRoomResponse, handlePlayerJoined, handlePlayerLeft]);
+  }, [socket, isConnected, passphrase, handleJoinRoomResponse, handlePlayerJoined, handlePlayerLeft, handleRoomStateSync]);
+
+  // Periodic room state sync - self-healing mechanism
+  useEffect(() => {
+    if (!socket || !isConnected || !roomState) return;
+
+    // Request room state sync every 10 seconds
+    const syncInterval = setInterval(() => {
+      if (socket && roomState?.room.id) {
+        console.log(`Room component: Requesting room state sync for room ${roomState.room.id}`);
+        socket.emit('sync-room-state', { roomId: roomState.room.id });
+      }
+    }, 10000); // 10 seconds
+
+    return () => {
+      clearInterval(syncInterval);
+    };
+  }, [socket, isConnected, roomState]);
 
   const handleLeaveRoom = () => {
     if (socket) {

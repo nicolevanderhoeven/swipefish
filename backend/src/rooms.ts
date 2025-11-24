@@ -368,24 +368,30 @@ export function initializeRoomHandlers(io: Server): void {
             room: formattedRoomState as any,
           };
           
-          // ARCHITECTURAL SIMPLIFICATION: Single source of truth approach
-          // Database = source of truth for room state (who SHOULD be in the room)
-          // Socket.io room = delivery mechanism (who CAN receive events)
-          // Event payload = current room state from database (what everyone should see)
-          //
-          // Strategy: Broadcast to ALL sockets in socket.io room
-          // Don't try to match socket_ids - just send to everyone in the room
-          // The event payload contains the authoritative room state from database
-          // This is simpler and more resilient than trying to match socket_ids
+          // Multi-layered delivery strategy for maximum reliability:
+          // 1. Broadcast to all sockets in socket.io room (primary method)
+          // 2. Direct emission to each existing player's socket (fallback)
+          // This ensures delivery even if socket.io room membership is out of sync
           
-          // Skip the joining socket (they already got join-room-response)
-          const socketsToNotify = socketsInRoomAfterRejoin.filter(s => s.id !== socket.id);
-          
-          // Broadcast to all sockets in the room (except the joining socket)
-          // The event payload contains the room state from database (single source of truth)
+          // Strategy 1: Broadcast to socket.io room
           io.to(room.id).emit('player-joined', playerJoinedEvent);
+          const socketsToNotify = socketsInRoomAfterRejoin.filter(s => s.id !== socket.id);
+          console.log(`Broadcasted player-joined event to room ${room.id} (${socketsToNotify.length} sockets in room)`);
           
-          console.log(`Broadcasted player-joined event to room ${room.id} with ${freshRoomState.players.length} total players. Sent to ${socketsToNotify.length} sockets in room (room state from database).`);
+          // Strategy 2: Direct emission to each existing player (fallback)
+          // This ensures delivery even if socket isn't in socket.io room
+          let directEmissionCount = 0;
+          for (const player of freshRoomState.players) {
+            if (player.socket_id === socket.id) {
+              continue; // Skip the joining player
+            }
+            const targetSocket = io.sockets.sockets.get(player.socket_id);
+            if (targetSocket) {
+              targetSocket.emit('player-joined', playerJoinedEvent);
+              directEmissionCount++;
+            }
+          }
+          console.log(`Also sent player-joined event directly to ${directEmissionCount} existing players (fallback)`);
         } else {
           console.log(`Warning: Could not find joined player ${socket.id} in room state, but broadcasting anyway`);
           // Broadcast anyway with the fresh room state so all players stay in sync
@@ -434,6 +440,61 @@ export function initializeRoomHandlers(io: Server): void {
         await removePlayerFromRoom(socket.id, io, socket);
       } catch (error) {
         console.error('Error leaving room:', error);
+      }
+    });
+
+    socket.on('sync-room-state', async (data: { roomId: string }) => {
+      try {
+        const { roomId } = data;
+        if (!roomId) {
+          console.log(`sync-room-state: Missing roomId from ${socket.id}`);
+          return;
+        }
+
+        // Fetch fresh room state from database (single source of truth)
+        const freshRoomState = await getRoomWithPlayers(roomId);
+        
+        if (!freshRoomState) {
+          console.log(`sync-room-state: Room ${roomId} not found for ${socket.id}`);
+          socket.emit('room-state-sync', {
+            success: false,
+            error: 'Room not found',
+          });
+          return;
+        }
+
+        // Ensure socket is in the room
+        socket.join(roomId);
+
+        // Format room state for JSON serialization
+        const formattedRoomState: RoomState = {
+          room: {
+            ...freshRoomState.room,
+            created_at: freshRoomState.room.created_at instanceof Date 
+              ? freshRoomState.room.created_at.toISOString() 
+              : (freshRoomState.room.created_at as any),
+          },
+          players: freshRoomState.players.map(p => ({
+            ...p,
+            joined_at: p.joined_at instanceof Date 
+              ? p.joined_at.toISOString() 
+              : (p.joined_at as any),
+          })),
+        };
+
+        // Send current room state to requesting socket
+        socket.emit('room-state-sync', {
+          success: true,
+          room: formattedRoomState as any,
+        });
+
+        console.log(`Sent room-state-sync to ${socket.id} for room ${roomId} (${freshRoomState.players.length} players)`);
+      } catch (error) {
+        console.error('Error syncing room state:', error);
+        socket.emit('room-state-sync', {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to sync room state',
+        });
       }
     });
 

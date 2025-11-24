@@ -41,3 +41,9 @@ export interface PlayerLeftEvent {
   room: RoomState;
 }
 
+export interface RoomStateSyncResponse {
+  success: boolean;
+  room?: RoomState;
+  error?: string;
+}
+
