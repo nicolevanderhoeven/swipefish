@@ -104,13 +104,15 @@ export function Room() {
   useEffect(() => {
     if (!socket || !isConnected || !roomState) return;
 
-    // Request room state sync every 10 seconds
+    // Request room state sync every 1 second
+    // This provides near-instant state correction if events are missed
+    // Load considerations: ~1 request/second per player is minimal for small-scale games
     const syncInterval = setInterval(() => {
       if (socket && roomState?.room.id) {
         console.log(`Room component: Requesting room state sync for room ${roomState.room.id}`);
         socket.emit('sync-room-state', { roomId: roomState.room.id });
       }
-    }, 10000); // 10 seconds
+    }, 1000); // 1 second
 
     return () => {
       clearInterval(syncInterval);

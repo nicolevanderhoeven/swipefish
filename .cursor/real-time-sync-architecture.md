@@ -163,9 +163,10 @@ socket.on('sync-room-state', async ({ roomId }) => {
 
 ### Potential Enhancements
 
-1. **Add periodic room state sync** (every 10 seconds)
+1. **Add periodic room state sync** (every 1 second) ✅ IMPLEMENTED
    - Self-healing for edge cases
-   - Low overhead
+   - Near-instant state correction
+   - Low overhead for small-scale games (~1 request/second per player)
    - Simple to implement
 
 2. **Add heartbeat/ping mechanism**
