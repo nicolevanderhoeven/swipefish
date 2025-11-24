@@ -11,4 +11,11 @@ data:
   
   # Frontend configuration
   VITE_SOCKET_URL: "wss://swipe.fish"
+  
+  # Observability configuration
+  OTEL_SERVICE_NAME: "swipefish-backend"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy.observability.svc.cluster.local:4318"
+  OTEL_RESOURCE_ATTRIBUTES: "app=swipefish,environment=production"
+  PROMETHEUS_PORT: "9464"
+  LOKI_ENDPOINT: "http://loki.observability.svc.cluster.local:3100"
 

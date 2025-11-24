@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: observability
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'swipefish'
+        app: 'swipefish'
+
+    scrape_configs:
+      # Scrape metrics from Alloy (which collects from backend pods)
+      - job_name: 'alloy'
+        static_configs:
+          - targets: ['alloy.observability.svc.cluster.local:12345']
+        metrics_path: '/metrics'
+        scrape_interval: 15s
+        metric_relabel_configs:
+          # Keep only metrics from backend pods (filter out Alloy's own metrics)
+          - source_labels: [job]
+            regex: 'backend.*'
+            action: keep
+
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+

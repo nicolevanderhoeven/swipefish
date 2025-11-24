@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alloy
+  namespace: observability
+  labels:
+    app: alloy
+    component: collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alloy
+  template:
+    metadata:
+      labels:
+        app: alloy
+        component: collector
+    spec:
+      serviceAccountName: alloy
+      containers:
+      - name: alloy
+        image: grafana/alloy:latest
+        args:
+          - run
+          - --server.http.listen-addr=0.0.0.0:12345
+          - --storage.path=/var/lib/alloy/data
+          - /etc/alloy/config.alloy
+        ports:
+        - containerPort: 12345
+          name: http
+        - containerPort: 4317
+          name: otlp-grpc
+        - containerPort: 4318
+          name: otlp-http
+        volumeMounts:
+        - name: alloy-config
+          mountPath: /etc/alloy
+        - name: alloy-data
+          mountPath: /var/lib/alloy/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 12345
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 12345
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: alloy-config
+        configMap:
+          name: alloy-config
+      - name: alloy-data
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alloy
+  namespace: observability
+  labels:
+    app: alloy
+spec:
+  type: ClusterIP
+  ports:
+  - port: 12345
+    targetPort: 12345
+    protocol: TCP
+    name: http
+  - port: 4317
+    targetPort: 4317
+    protocol: TCP
+    name: otlp-grpc
+  - port: 4318
+    targetPort: 4318
+    protocol: TCP
+    name: otlp-http
+  selector:
+    app: alloy
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alloy
+  namespace: observability
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: alloy
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/proxy
+  - services
+  - endpoints
+  - pods
+  - pods/log
+  verbs: ["get", "list", "watch"]
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: alloy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: alloy
+subjects:
+- kind: ServiceAccount
+  name: alloy
+  namespace: observability
+
