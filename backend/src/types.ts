@@ -30,3 +30,13 @@ export interface JoinRoomResponse {
   error?: string;
 }
 
+export interface GameStartedEvent {
+  room: RoomState;
+}
+
+export interface StartGameResponse {
+  success: boolean;
+  room?: RoomState;
+  error?: string;
+}
+

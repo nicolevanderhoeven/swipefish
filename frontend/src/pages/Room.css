@@ -117,6 +117,62 @@
   transform: scale(0.98);
 }
 
+.game-status-section {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.player-count {
+  margin: 0;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.player-count-warning {
+  color: #c33;
+  font-weight: 600;
+}
+
+.game-active-message {
+  margin: 0;
+  color: #667eea;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.start-game-button {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+  min-height: 48px;
+  background: #667eea;
+  color: white;
+  margin-bottom: 0.75rem;
+}
+
+.start-game-button:hover:not(:disabled) {
+  background: #5568d3;
+}
+
+.start-game-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.start-game-button:disabled {
+  background: #ccc;
+  color: #666;
+  cursor: not-allowed;
+}
+
 @media (max-width: 480px) {
   .room-content {
     padding: 1.5rem;

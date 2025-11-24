@@ -192,6 +192,15 @@ export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; 
   };
 }
 
+export async function updateRoomStatus(roomId: string, status: 'waiting' | 'active' | 'finished'): Promise<void> {
+  const dbPool = ensurePoolInitialized();
+
+  await dbPool.query(
+    'UPDATE rooms SET status = $1 WHERE id = $2',
+    [status, roomId]
+  );
+}
+
 export async function cleanupEmptyRooms(): Promise<void> {
   const dbPool = ensurePoolInitialized();
 

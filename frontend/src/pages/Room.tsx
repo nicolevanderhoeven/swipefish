@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
 import { PlayerList } from '../components/PlayerList';
-import { RoomState, PlayerJoinedEvent, PlayerLeftEvent, JoinRoomResponse, RoomStateSyncResponse } from '../types';
+import { RoomState, PlayerJoinedEvent, PlayerLeftEvent, JoinRoomResponse, RoomStateSyncResponse, GameStartedEvent, StartGameResponse } from '../types';
 import { getPlayerName } from '../utils/playerName';
 import './Room.css';
 
@@ -12,6 +12,7 @@ export function Room() {
   const { socket, isConnected, error: socketError } = useSocket();
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isStartingGame, setIsStartingGame] = useState(false);
   const navigate = useNavigate();
 
   // Use useCallback to stabilize handler functions so they can be properly removed
@@ -68,6 +69,26 @@ export function Room() {
     }
   }, []);
 
+  const handleGameStarted = useCallback((event: GameStartedEvent) => {
+    console.log('Room component: Received game-started event', event);
+    setRoomState(event.room);
+    setIsStartingGame(false);
+    setError(null);
+  }, []);
+
+  const handleStartGameResponse = useCallback((response: StartGameResponse) => {
+    if (response.success && response.room) {
+      console.log('Room component: Start game successful', response.room);
+      setRoomState(response.room);
+      setIsStartingGame(false);
+      setError(null);
+    } else {
+      console.log('Room component: Start game failed', response.error);
+      setError(response.error || 'Failed to start game');
+      setIsStartingGame(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!socket || !isConnected || !passphrase) return;
 
@@ -76,6 +97,8 @@ export function Room() {
     socket.on('player-joined', handlePlayerJoined);
     socket.on('player-left', handlePlayerLeft);
     socket.on('room-state-sync', handleRoomStateSync);
+    socket.on('game-started', handleGameStarted);
+    socket.on('start-game-response', handleStartGameResponse);
 
     // Always emit join-room when the component loads to ensure:
     // 1. The socket is in the socket.io room (even if it reconnected)
@@ -97,8 +120,10 @@ export function Room() {
       socket.off('player-joined', handlePlayerJoined);
       socket.off('player-left', handlePlayerLeft);
       socket.off('room-state-sync', handleRoomStateSync);
+      socket.off('game-started', handleGameStarted);
+      socket.off('start-game-response', handleStartGameResponse);
     };
-  }, [socket, isConnected, passphrase, handleJoinRoomResponse, handlePlayerJoined, handlePlayerLeft, handleRoomStateSync]);
+  }, [socket, isConnected, passphrase, handleJoinRoomResponse, handlePlayerJoined, handlePlayerLeft, handleRoomStateSync, handleGameStarted, handleStartGameResponse]);
 
   // Periodic room state sync - self-healing mechanism
   useEffect(() => {
@@ -170,6 +195,18 @@ export function Room() {
     }
   };
 
+  const handleStartGame = () => {
+    if (!socket || !roomState || isStartingGame) return;
+    
+    setIsStartingGame(true);
+    setError(null);
+    socket.emit('start-game', { roomId: roomState.room.id });
+  };
+
+  const MIN_PLAYERS = 3;
+  const canStartGame = roomState?.room.status === 'waiting' && roomState.players.length >= MIN_PLAYERS;
+  const playerCount = roomState?.players.length || 0;
+
   return (
     <div className="room-page">
       <Logo onLeaveRoom={handleLeaveRoom} />
@@ -192,8 +229,36 @@ export function Room() {
           players={roomState.players}
           currentSocketId={socket?.id}
         />
+
+        {roomState.room.status === 'waiting' && (
+          <div className="game-status-section">
+            <p className="player-count">
+              {playerCount} / {MIN_PLAYERS} players
+              {playerCount < MIN_PLAYERS && (
+                <span className="player-count-warning">
+                  {' '}(need {MIN_PLAYERS - playerCount} more)
+                </span>
+              )}
+            </p>
+          </div>
+        )}
+
+        {roomState.room.status === 'active' && (
+          <div className="game-status-section">
+            <p className="game-active-message">🎮 Game is in progress!</p>
+          </div>
+        )}
         
         <div className="room-actions">
+          {roomState.room.status === 'waiting' && (
+            <button
+              className="start-game-button"
+              onClick={handleStartGame}
+              disabled={!canStartGame || isStartingGame}
+            >
+              {isStartingGame ? 'Starting...' : 'Start Game'}
+            </button>
+          )}
           <button
             className="back-button"
             onClick={() => {

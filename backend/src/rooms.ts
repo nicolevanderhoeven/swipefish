@@ -1,4 +1,5 @@
 import { Server, Socket } from 'socket.io';
+import { trace, context, SpanStatusCode } from '@opentelemetry/api';
 import {
   createRoom,
   findRoomByPassphrase,
@@ -9,17 +10,52 @@ import {
   cleanupEmptyRooms,
   getPlayersInRoom,
   ensurePoolInitialized,
+  updateRoomStatus,
 } from './db';
 import { generatePassphrase } from './passphrase';
-import { RoomState } from './types';
+import { RoomState, GameStartedEvent } from './types';
+
+const tracer = trace.getTracer('swipefish-rooms', '1.0.0');
+
+// Helper function for structured logging with trace context
+function logWithTrace(level: 'info' | 'error' | 'warn', message: string, metadata?: Record<string, any>): void {
+  const span = trace.getActiveSpan();
+  const traceId = span?.spanContext().traceId;
+  const spanId = span?.spanContext().spanId;
+  
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    level,
+    message,
+    traceId,
+    spanId,
+    ...metadata,
+  };
+  
+  const logString = JSON.stringify(logEntry);
+  if (level === 'error') {
+    console.error(logString);
+  } else if (level === 'warn') {
+    console.warn(logString);
+  } else {
+    console.log(logString);
+  }
+}
 
 // In-memory room state for active rooms
 const activeRooms = new Map<string, RoomState>();
 
 async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socket): Promise<void> {
-  // Find which room this player is in by checking database (single source of truth)
-  // First, find the player in the database to get their room_id
-  const dbPool = ensurePoolInitialized();
+  const span = tracer.startSpan('socket.io.remove-player', {
+    attributes: {
+      'socket.id': socketId,
+    },
+  });
+  
+  try {
+    // Find which room this player is in by checking database (single source of truth)
+    // First, find the player in the database to get their room_id
+    const dbPool = ensurePoolInitialized();
   
   let roomId: string | null = null;
   
@@ -31,37 +67,54 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
     
     if (playerResult.rows.length === 0) {
       // Player not in any room
-      console.log(`Player ${socketId} not found in any room`);
+      span.setAttributes({ 'player.found': false });
+      span.setStatus({ code: SpanStatusCode.OK });
+      span.end();
+      logWithTrace('info', 'Player not found in any room', { socketId });
       return;
     }
     
     roomId = playerResult.rows[0].room_id;
+    if (roomId) {
+      span.setAttributes({ 'room.id': roomId, 'player.found': true });
+    }
   } catch (error) {
-    console.error('Error finding player room:', error);
+    span.recordException(error as Error);
+    span.setStatus({ code: SpanStatusCode.ERROR });
+    span.end();
+    logWithTrace('error', 'Error finding player room', { 
+      socketId, 
+      error: error instanceof Error ? error.message : String(error) 
+    });
     return;
   }
 
   if (!roomId) {
+    span.end();
     return;
   }
 
   // Remove player from database FIRST (single source of truth)
   await removePlayer(socketId);
-  console.log(`Removed player ${socketId} from database`);
+  logWithTrace('info', 'Removed player from database', { socketId, roomId });
 
   // Fetch FRESH room state from database (single source of truth)
   const freshRoomState = await getRoomWithPlayers(roomId);
   
   if (!freshRoomState) {
-    console.log(`Room ${roomId} not found after removing player`);
+    logWithTrace('warn', 'Room not found after removing player', { roomId });
     activeRooms.delete(roomId);
+    span.setAttributes({ 'room.found': false });
+    span.setStatus({ code: SpanStatusCode.OK });
+    span.end();
     return;
   }
   
-  console.log(`Room ${roomId} has ${freshRoomState.players.length} players after removing ${socketId}`);
-  if (freshRoomState.players.length > 0) {
-    console.log(`Remaining players:`, freshRoomState.players.map(p => ({ socketId: p.socket_id, name: p.name })));
-  }
+  logWithTrace('info', 'Room state after removing player', { 
+    roomId, 
+    playerCount: freshRoomState.players.length,
+    remainingPlayers: freshRoomState.players.map(p => ({ socketId: p.socket_id, name: p.name })),
+  });
 
   // Update in-memory cache with fresh data
   activeRooms.set(roomId, freshRoomState);
@@ -95,16 +148,20 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
     if (targetSocket) {
       // Ensure this socket is in the room
       targetSocket.join(roomId);
-      console.log(`Ensured socket ${player.socket_id} is in room ${roomId}`);
+      logWithTrace('info', 'Ensured socket is in room', { socketId: player.socket_id, roomId });
     } else {
-      console.log(`Warning: Player ${player.socket_id} is in database but socket is not connected`);
+      logWithTrace('warn', 'Player in database but socket not connected', { socketId: player.socket_id });
     }
   }
   
   // Get list of sockets in room after ensuring all remaining players are in it
   const socketsInRoom = await io.in(roomId).fetchSockets();
-  console.log(`Sockets in room after ensuring membership: ${socketsInRoom.length}`, socketsInRoom.map(s => s.id));
-  console.log(`Remaining players in database: ${freshRoomState.players.length}`, freshRoomState.players.map(p => ({ socketId: p.socket_id, name: p.name })));
+  logWithTrace('info', 'Sockets in room after ensuring membership', { 
+    roomId, 
+    socketCount: socketsInRoom.length,
+    socketIds: socketsInRoom.map(s => s.id),
+    playerCount: freshRoomState.players.length,
+  });
   
   // Multi-layered delivery strategy for maximum reliability:
   // 1. Broadcast to all sockets in socket.io room (primary method)
@@ -113,7 +170,7 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
   
   // Strategy 1: Broadcast to socket.io room
   io.to(roomId).emit('player-left', playerLeftEvent);
-  console.log(`Broadcasted player-left event to room ${roomId} (${socketsInRoom.length} sockets in room)`);
+  logWithTrace('info', 'Broadcasted player-left event to room', { roomId, socketCount: socketsInRoom.length });
   
   // Strategy 2: Direct emission to each remaining player (fallback)
   // This ensures delivery even if socket isn't in socket.io room
@@ -125,33 +182,71 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
       directEmissionCount++;
     }
   }
-  console.log(`Also sent player-left event directly to ${directEmissionCount} remaining players (fallback)`);
+  logWithTrace('info', 'Sent player-left event directly to players', { roomId, directEmissionCount });
 
   // Remove socket from socket.io room AFTER broadcasting
   if (socket) {
     socket.leave(roomId);
-    console.log(`Socket ${socketId} left socket.io room ${roomId}`);
+    logWithTrace('info', 'Socket left socket.io room', { socketId, roomId });
   }
 
   // Only clean up if room is actually empty
   if (freshRoomState.players.length === 0) {
     activeRooms.delete(roomId);
-    console.log(`Room ${roomId} is now empty, removed from memory`);
+    logWithTrace('info', 'Room is now empty, removed from memory', { roomId });
     // Only cleanup empty rooms in database if room is actually empty
     await cleanupEmptyRooms();
   } else {
-    console.log(`Room ${roomId} still has ${freshRoomState.players.length} players, not cleaning up`);
+    logWithTrace('info', 'Room still has players, not cleaning up', { 
+      roomId, 
+      playerCount: freshRoomState.players.length 
+    });
+  }
+  
+  span.setAttributes({
+    'room.players.remaining': freshRoomState.players.length,
+    'room.cleaned': freshRoomState.players.length === 0,
+  });
+  span.setStatus({ code: SpanStatusCode.OK });
+  span.end();
+  } catch (error) {
+    span.recordException(error as Error);
+    span.setStatus({ code: SpanStatusCode.ERROR });
+    span.end();
+    logWithTrace('error', 'Error removing player from room', { 
+      socketId, 
+      error: error instanceof Error ? error.message : String(error) 
+    });
+    throw error;
   }
 }
 
 export function initializeRoomHandlers(io: Server): void {
   io.on('connection', (socket: Socket) => {
-    console.log(`Client connected: ${socket.id}`);
+    const connectionSpan = tracer.startSpan('socket.io.connection', {
+      attributes: {
+        'socket.id': socket.id,
+        'socket.transport': socket.conn.transport.name,
+      },
+    });
+    
+    logWithTrace('info', 'Client connected', { socketId: socket.id });
+    
+    context.with(trace.setSpan(context.active(), connectionSpan), () => {
+      connectionSpan.end();
+    });
 
     socket.on('create-room', async (data: { name?: string } = {}) => {
+      const span = tracer.startSpan('socket.io.create-room', {
+        attributes: {
+          'socket.id': socket.id,
+          'player.name': data.name || 'anonymous',
+        },
+      });
+      
       try {
         const { name } = data;
-        console.log(`Create room request from ${socket.id} with name: ${name || 'none'}`);
+        logWithTrace('info', 'Create room request', { socketId: socket.id, playerName: name || 'none' });
         
         // Generate unique passphrase
         let passphrase: string;
@@ -214,13 +309,32 @@ export function initializeRoomHandlers(io: Server): void {
         };
 
         // Send response with fresh room state
+        span.setAttributes({
+          'room.id': room.id,
+          'room.passphrase': passphrase,
+          'room.players.count': freshRoomState.players.length,
+        });
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
+        
         socket.emit('create-room-response', {
           success: true,
           passphrase,
           room: formattedRoomState as any,
         });
       } catch (error) {
-        console.error('Error creating room:', error);
+        span.recordException(error as Error);
+        span.setStatus({ 
+          code: SpanStatusCode.ERROR, 
+          message: error instanceof Error ? error.message : 'Failed to create room' 
+        });
+        span.end();
+        
+        logWithTrace('error', 'Error creating room', { 
+          socketId: socket.id, 
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
         socket.emit('create-room-response', {
           success: false,
           error: 'Failed to create room',
@@ -229,10 +343,18 @@ export function initializeRoomHandlers(io: Server): void {
     });
 
     socket.on('join-room', async (data: { passphrase: string; name?: string }) => {
+      const passphrase = data.passphrase;
+      const span = tracer.startSpan('socket.io.join-room', {
+        attributes: {
+          'socket.id': socket.id,
+          'room.passphrase': passphrase,
+          'player.name': data.name || 'anonymous',
+        },
+      });
+      
       try {
-        const { passphrase, name } = data;
-
-        console.log(`Join room request from ${socket.id} with passphrase: ${passphrase}`);
+        const { name } = data;
+        logWithTrace('info', 'Join room request', { socketId: socket.id, passphrase });
 
         if (!passphrase) {
           socket.emit('join-room-response', {
@@ -246,7 +368,7 @@ export function initializeRoomHandlers(io: Server): void {
         const room = await findRoomByPassphrase(passphrase);
 
         if (!room) {
-          console.log(`Room not found for passphrase: ${passphrase}`);
+          logWithTrace('warn', 'Room not found for passphrase', { passphrase });
           socket.emit('join-room-response', {
             success: false,
             error: 'Room not found',
@@ -254,7 +376,7 @@ export function initializeRoomHandlers(io: Server): void {
           return;
         }
 
-        console.log(`Found room ${room.id} for passphrase: ${passphrase}`);
+        logWithTrace('info', 'Found room for passphrase', { roomId: room.id, passphrase });
 
         // Add player to database FIRST (single source of truth)
         const player = await addPlayerToRoom(room.id, socket.id, name?.trim() || undefined);
@@ -422,11 +544,32 @@ export function initializeRoomHandlers(io: Server): void {
           // Also broadcast to the room as a fallback
           io.to(room.id).emit('player-joined', playerJoinedEvent);
           
-          console.log(`Broadcasted player-joined event (unknown player) to room ${room.id}. Sent directly to ${sentCount} sockets.`);
+          logWithTrace('warn', 'Broadcasted player-joined event (unknown player)', { 
+            roomId: room.id, 
+            sentCount 
+          });
         }
+        
+        span.setAttributes({
+          'room.id': room.id,
+          'room.players.count': freshRoomState.players.length,
+        });
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
       } catch (error) {
-        console.error('Error joining room:', error);
-        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+        span.recordException(error as Error);
+        span.setStatus({ 
+          code: SpanStatusCode.ERROR, 
+          message: error instanceof Error ? error.message : 'Failed to join room' 
+        });
+        span.end();
+        
+        logWithTrace('error', 'Error joining room', { 
+          socketId: socket.id, 
+          passphrase,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
         socket.emit('join-room-response', {
           success: false,
           error: error instanceof Error ? error.message : 'Failed to join room',
@@ -498,12 +641,184 @@ export function initializeRoomHandlers(io: Server): void {
       }
     });
 
+    socket.on('start-game', async (data: { roomId: string }) => {
+      const span = tracer.startSpan('socket.io.start-game', {
+        attributes: {
+          'socket.id': socket.id,
+          'room.id': data.roomId || 'unknown',
+        },
+      });
+      
+      try {
+        const { roomId } = data;
+        logWithTrace('info', 'Start game request', { socketId: socket.id, roomId });
+
+        if (!roomId) {
+          socket.emit('start-game-response', {
+            success: false,
+            error: 'Room ID is required',
+          });
+          span.setStatus({ code: SpanStatusCode.ERROR, message: 'Missing room ID' });
+          span.end();
+          return;
+        }
+
+        // Fetch fresh room state from database (single source of truth)
+        const freshRoomState = await getRoomWithPlayers(roomId);
+        
+        if (!freshRoomState) {
+          logWithTrace('warn', 'Room not found for start-game', { roomId });
+          socket.emit('start-game-response', {
+            success: false,
+            error: 'Room not found',
+          });
+          span.setStatus({ code: SpanStatusCode.ERROR, message: 'Room not found' });
+          span.end();
+          return;
+        }
+
+        // Validate room status
+        if (freshRoomState.room.status !== 'waiting') {
+          logWithTrace('warn', 'Cannot start game - room not in waiting status', { 
+            roomId, 
+            currentStatus: freshRoomState.room.status 
+          });
+          socket.emit('start-game-response', {
+            success: false,
+            error: `Game cannot be started. Room status is: ${freshRoomState.room.status}`,
+          });
+          span.setStatus({ code: SpanStatusCode.ERROR, message: 'Invalid room status' });
+          span.end();
+          return;
+        }
+
+        // Validate minimum players (need at least 3: 1 Judge + 1 Swipefish + 1 other)
+        const MIN_PLAYERS = 3;
+        if (freshRoomState.players.length < MIN_PLAYERS) {
+          logWithTrace('warn', 'Cannot start game - insufficient players', { 
+            roomId, 
+            playerCount: freshRoomState.players.length,
+            minRequired: MIN_PLAYERS 
+          });
+          socket.emit('start-game-response', {
+            success: false,
+            error: `Need at least ${MIN_PLAYERS} players to start. Currently have ${freshRoomState.players.length}.`,
+          });
+          span.setStatus({ code: SpanStatusCode.ERROR, message: 'Insufficient players' });
+          span.end();
+          return;
+        }
+
+        // Update room status to 'active'
+        await updateRoomStatus(roomId, 'active');
+        logWithTrace('info', 'Updated room status to active', { roomId });
+
+        // Fetch fresh room state after update
+        const updatedRoomState = await getRoomWithPlayers(roomId);
+        
+        if (!updatedRoomState) {
+          console.error(`Failed to load room state after starting game for room ${roomId}`);
+          socket.emit('start-game-response', {
+            success: false,
+            error: 'Failed to start game',
+          });
+          span.setStatus({ code: SpanStatusCode.ERROR, message: 'Failed to load room state' });
+          span.end();
+          return;
+        }
+
+        // Update in-memory cache
+        activeRooms.set(roomId, updatedRoomState);
+
+        // Format room state for JSON serialization
+        const formattedRoomState: RoomState = {
+          room: {
+            ...updatedRoomState.room,
+            created_at: updatedRoomState.room.created_at instanceof Date 
+              ? updatedRoomState.room.created_at.toISOString() 
+              : (updatedRoomState.room.created_at as any),
+          },
+          players: updatedRoomState.players.map(p => ({
+            ...p,
+            joined_at: p.joined_at instanceof Date 
+              ? p.joined_at.toISOString() 
+              : (p.joined_at as any),
+          })),
+        };
+
+        // Ensure all players' sockets are in the room before broadcasting
+        const socketsInRoom = await io.in(roomId).fetchSockets();
+        for (const player of updatedRoomState.players) {
+          const targetSocket = io.sockets.sockets.get(player.socket_id);
+          if (targetSocket) {
+            targetSocket.join(roomId);
+          }
+        }
+
+        // Create game started event
+        const gameStartedEvent: GameStartedEvent = {
+          room: formattedRoomState as any,
+        };
+
+        // Broadcast to all players in the room
+        io.to(roomId).emit('game-started', gameStartedEvent);
+        logWithTrace('info', 'Broadcasted game-started event', { 
+          roomId, 
+          playerCount: updatedRoomState.players.length 
+        });
+
+        // Also send direct response to the player who started the game
+        socket.emit('start-game-response', {
+          success: true,
+          room: formattedRoomState as any,
+        });
+
+        span.setAttributes({
+          'room.id': roomId,
+          'room.players.count': updatedRoomState.players.length,
+        });
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
+      } catch (error) {
+        span.recordException(error as Error);
+        span.setStatus({ 
+          code: SpanStatusCode.ERROR, 
+          message: error instanceof Error ? error.message : 'Failed to start game' 
+        });
+        span.end();
+        
+        logWithTrace('error', 'Error starting game', { 
+          socketId: socket.id, 
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        socket.emit('start-game-response', {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to start game',
+        });
+      }
+    });
+
     socket.on('disconnect', async () => {
+      const span = tracer.startSpan('socket.io.disconnect', {
+        attributes: {
+          'socket.id': socket.id,
+        },
+      });
+      
       try {
         await removePlayerFromRoom(socket.id, io, socket);
-        console.log(`Client disconnected: ${socket.id}`);
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
+        logWithTrace('info', 'Client disconnected', { socketId: socket.id });
       } catch (error) {
-        console.error('Error handling disconnect:', error);
+        span.recordException(error as Error);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        span.end();
+        logWithTrace('error', 'Error handling disconnect', { 
+          socketId: socket.id, 
+          error: error instanceof Error ? error.message : String(error) 
+        });
       }
     });
   });
