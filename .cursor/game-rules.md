@@ -9,8 +9,8 @@ Collect the most **Match Points** by the end of the game.
 
 You gain points by:
 - Being selected by the Judge as their best match  
-- Successfully catfishing the Judge (if you are the Catfish)  
-- Correctly identifying the Catfish (optional guessing phase)
+- Successfully swipefishing the Judge (if you are the Swipefish)  
+- Correctly identifying the Swipefish (optional guessing phase)
 
 ---
 
@@ -21,7 +21,7 @@ Each round, one player becomes the **Judge**—a dater with:
 
 The other players are **Potential Matches** trying to impress the Judge.
 
-One Potential Match is secretly assigned as the **Catfish**:
+One Potential Match is secretly assigned as the **Swipefish**:
 - The only person besides the Judge who knows the Judge’s secret Goal  
 - They can tailor their answers to perfectly match what the Judge wants  
 - They are trying to be chosen *without revealing themselves*
@@ -29,7 +29,7 @@ One Potential Match is secretly assigned as the **Catfish**:
 Everyone else:
 - Is a Hopeful Match  
 - Is guessing what the Judge might want  
-- Is trying to either get chosen OR help identify the Catfish
+- Is trying to either get chosen OR help identify the Swipefish
 
 ---
 
@@ -63,14 +63,14 @@ They may describe what they’re looking for, **without naming the Goal.**
 
 ---
 
-## 2. Assign the Catfish
-The app (or deck) secretly selects **one** Potential Match to be the Catfish.
+## 2. Assign the Swipefish
+The app (or deck) secretly selects **one** Potential Match to be the Swipefish.
 
-The Catfish sees the Judge’s **Goal**.
+The Swipefish sees the Judge’s **Goal**.
 
 Nobody else does.
 
-**Catfish Objective:**  
+**Swipefish Objective:**  
 Get chosen by the Judge without being detected.
 
 ---
@@ -95,7 +95,7 @@ One by one, players:
 - Read it aloud  
 - Give a short “explanation” as to why their answer fits the prompt  
 
-The Catfish will tailor their answer to align with the Judge’s Goal.
+The Swipefish will tailor their answer to align with the Judge’s Goal.
 
 ---
 
@@ -107,9 +107,9 @@ After all answers are revealed, the Judge picks their favorite—the one that:
 
 **Scoring:**
 - Selected player: **+2 Match Points**  
-- If the selected player was the Catfish:  
-  - Catfish earns an additional **+2 Match Points** (total +4)  
-  - Judge loses **-1 Match Point** (“You got catfished”)
+- If the selected player was the Swipefish:  
+  - Swipefish earns an additional **+2 Match Points** (total +4)  
+  - Judge loses **-1 Match Point** (“You got swipefished”)
 
 ---
 
@@ -120,11 +120,37 @@ This is usually funny, surprising, or damning.
 
 ---
 
-## 7. Reveal the Catfish (Optional Guessing Phase)
-Before the Catfish is revealed, players may point at who they believe the Catfish was.
+## 7. Reveal the Swipefish (Optional Guessing Phase)
+Before the Swipefish is revealed, players may point at who they believe the Swipefish was.
 
-Then the Catfish announces themselves.
+Then the Swipefish announces themselves.
 
 **Scoring (optional):**
 - Each correct guesser: **+1 Match Point**  
-- Catfish earns **+1 Match Point** for every incorr
+- Swipefish earns **+1 Match Point** for every incorrect guess
+
+If you want the lightest ruleset, omit this phase.
+
+---
+
+## 8. End of Round
+Discard all played cards.  
+Rotate to the next Judge.  
+Begin the next round.
+
+Game continues until:
+- Everyone has been the Judge once (short game)  
+- Everyone has been the Judge twice (long game)  
+- Or a chosen number of rounds
+
+---
+
+# 🏆 WINNING THE GAME
+At the end, the player with the **most Match Points** wins.
+
+**Tie-breaker:**
+1. Most correct Swipefish guesses  
+2. Most successful Swipefish rounds  
+3. Sudden-death bonus prompt (or rock-paper-scissors)
+
+---
