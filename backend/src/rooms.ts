@@ -45,33 +45,6 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
     return;
   }
 
-  // Get room state BEFORE removing player to see who else is in the room
-  const roomStateBeforeRemoval = await getRoomWithPlayers(roomId);
-  console.log(`Room ${roomId} has ${roomStateBeforeRemoval?.players.length || 0} players before removing ${socketId}`);
-  if (roomStateBeforeRemoval) {
-    console.log(`Players before removal:`, roomStateBeforeRemoval.players.map(p => ({ socketId: p.socket_id, name: p.name })));
-  }
-
-  // Get list of remaining players BEFORE removing (so we know who to notify)
-  const remainingPlayersBeforeRemoval = roomStateBeforeRemoval?.players.filter(p => p.socket_id !== socketId) || [];
-
-  // ARCHITECTURAL SIMPLIFICATION: Ensure all connected players are in socket.io room
-  // Before broadcasting, make sure all players' sockets are in the room
-  // This ensures reliable event delivery
-  for (const player of roomStateBeforeRemoval?.players || []) {
-    if (player.socket_id === socketId) continue; // Skip the leaving player
-    const targetSocket = io.sockets.sockets.get(player.socket_id);
-    if (targetSocket) {
-      // Ensure this socket is in the room
-      targetSocket.join(roomId);
-    }
-  }
-  
-  // Get list of sockets in room BEFORE removing the leaving socket
-  // This ensures we capture all sockets that should receive the event
-  const socketsInRoomBeforeRemoval = await io.in(roomId).fetchSockets();
-  console.log(`Sockets in room before removal: ${socketsInRoomBeforeRemoval.length}`, socketsInRoomBeforeRemoval.map(s => s.id));
-
   // Remove player from database FIRST (single source of truth)
   await removePlayer(socketId);
   console.log(`Removed player ${socketId} from database`);
@@ -109,36 +82,50 @@ async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socke
     })),
   };
 
-  console.log(`About to broadcast player-left to room ${roomId}. Sockets in room before removal: ${socketsInRoomBeforeRemoval.length}`, socketsInRoomBeforeRemoval.map(s => s.id));
-  console.log(`Remaining players in database: ${freshRoomState.players.length}`, freshRoomState.players.map(p => ({ socketId: p.socket_id, name: p.name })));
-  
-  // Broadcast player left to all remaining players
-  // Send directly to each player's socket by socket ID (from database)
-  // This ensures all players receive the event even if their socket isn't in the socket.io room
-  console.log(`Broadcasting player-left event to room ${roomId} (${freshRoomState.players.length} remaining players)`);
-  
   const playerLeftEvent = {
     socketId: socketId,
     room: formattedRoomState as any,
   };
   
-  // ARCHITECTURAL SIMPLIFICATION: Single source of truth approach
-  // Database = source of truth for room state (who SHOULD be in the room)
-  // Socket.io room = delivery mechanism (who CAN receive events)
-  // Event payload = current room state from database (what everyone should see)
-  //
-  // Strategy: Broadcast to ALL sockets in socket.io room (except the leaving socket)
-  // Don't try to match socket_ids - just send to everyone in the room
-  // The event payload contains the authoritative room state from database
+  // CRITICAL FIX: Ensure all remaining players' sockets are in the socket.io room
+  // This handles cases where sockets reconnected but didn't rejoin the room
+  // We do this AFTER removing the player so we only ensure remaining players are in the room
+  for (const player of freshRoomState.players) {
+    const targetSocket = io.sockets.sockets.get(player.socket_id);
+    if (targetSocket) {
+      // Ensure this socket is in the room
+      targetSocket.join(roomId);
+      console.log(`Ensured socket ${player.socket_id} is in room ${roomId}`);
+    } else {
+      console.log(`Warning: Player ${player.socket_id} is in database but socket is not connected`);
+    }
+  }
   
-  // Get sockets in room (excluding the leaving socket)
-  const socketsToNotify = socketsInRoomBeforeRemoval.filter(s => s.id !== socketId);
+  // Get list of sockets in room after ensuring all remaining players are in it
+  const socketsInRoom = await io.in(roomId).fetchSockets();
+  console.log(`Sockets in room after ensuring membership: ${socketsInRoom.length}`, socketsInRoom.map(s => s.id));
+  console.log(`Remaining players in database: ${freshRoomState.players.length}`, freshRoomState.players.map(p => ({ socketId: p.socket_id, name: p.name })));
   
-  // Broadcast to all sockets in the room (except the leaving socket)
-  // The event payload contains the room state from database (single source of truth)
+  // Multi-layered delivery strategy for maximum reliability:
+  // 1. Broadcast to all sockets in socket.io room (primary method)
+  // 2. Direct emission to each remaining player's socket (fallback)
+  // This ensures delivery even if socket.io room membership is out of sync
+  
+  // Strategy 1: Broadcast to socket.io room
   io.to(roomId).emit('player-left', playerLeftEvent);
+  console.log(`Broadcasted player-left event to room ${roomId} (${socketsInRoom.length} sockets in room)`);
   
-  console.log(`Broadcasted player-left event to room ${roomId}. Room now has ${freshRoomState.players.length} players (from database). Sent to ${socketsToNotify.length} sockets in room.`);
+  // Strategy 2: Direct emission to each remaining player (fallback)
+  // This ensures delivery even if socket isn't in socket.io room
+  let directEmissionCount = 0;
+  for (const player of freshRoomState.players) {
+    const targetSocket = io.sockets.sockets.get(player.socket_id);
+    if (targetSocket) {
+      targetSocket.emit('player-left', playerLeftEvent);
+      directEmissionCount++;
+    }
+  }
+  console.log(`Also sent player-left event directly to ${directEmissionCount} remaining players (fallback)`);
 
   // Remove socket from socket.io room AFTER broadcasting
   if (socket) {
