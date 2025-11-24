@@ -378,6 +378,34 @@ export function initializeRoomHandlers(io: Server): void {
 
         logWithTrace('info', 'Found room for passphrase', { roomId: room.id, passphrase });
 
+        // Check if game is already in progress
+        if (room.status !== 'waiting') {
+          // Check if this player is already in the room (reconnection case)
+          const existingPlayers = await getPlayersInRoom(room.id);
+          const isExistingPlayer = existingPlayers.some(p => p.socket_id === socket.id);
+          
+          if (!isExistingPlayer) {
+            logWithTrace('warn', 'Attempted to join room with game in progress', { 
+              roomId: room.id, 
+              passphrase,
+              status: room.status,
+              socketId: socket.id
+            });
+            socket.emit('join-room-response', {
+              success: false,
+              error: 'Game already in progress. New players cannot join.',
+            });
+            span.setStatus({ code: SpanStatusCode.ERROR, message: 'Game already in progress' });
+            span.end();
+            return;
+          }
+          // If player already exists, allow reconnection
+          logWithTrace('info', 'Allowing reconnection for existing player', { 
+            roomId: room.id, 
+            socketId: socket.id 
+          });
+        }
+
         // Add player to database FIRST (single source of truth)
         const player = await addPlayerToRoom(room.id, socket.id, name?.trim() || undefined);
         console.log(`Added player ${player.id} to room ${room.id}`);
