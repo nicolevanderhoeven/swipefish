@@ -49,26 +49,17 @@ export function initializeInstrumentation(): void {
   });
 
   // Configure Prometheus metrics exporter
-  // PrometheusExporter exposes metrics via HTTP endpoint and needs to be used with a metric reader
+  // PrometheusExporter exposes metrics via HTTP endpoint
+  // Note: When used with a metric reader, we don't need to call startServer() manually
+  // The exporter will handle the HTTP server automatically
   const prometheusExporter = new PrometheusExporter({
     port: prometheusPort,
     endpoint: '/metrics',
+    preventServerStart: false, // Allow the exporter to start its own server
   });
 
-  // Start the Prometheus exporter server
-  // Wrap in try-catch to handle cases where server is already running
-  try {
-    prometheusExporter.startServer();
-  } catch (error: any) {
-    // If server is already running, that's okay - continue
-    if (error?.code === 'ERR_SERVER_ALREADY_LISTEN') {
-      console.warn('Prometheus exporter server already running, continuing...');
-    } else {
-      throw error;
-    }
-  }
-
   // Create metric reader that exports to Prometheus
+  // The PrometheusExporter will automatically start its HTTP server when metrics are collected
   const metricReader = new PeriodicExportingMetricReader({
     exporter: prometheusExporter as any, // Type assertion needed due to interface differences
     exportIntervalMillis: 10000, // Export metrics every 10 seconds
