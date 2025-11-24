@@ -51,14 +51,15 @@ export function Room() {
 
   const handleRoomStateSync = useCallback((response: RoomStateSyncResponse) => {
     if (response.success && response.room) {
-      console.log('Room component: Received room-state-sync', response.room);
+      const syncedRoom = response.room; // Capture in local variable for type narrowing
+      console.log('Room component: Received room-state-sync', syncedRoom);
       setRoomState((prevState) => {
         // Only update if the state actually changed (different player count or different player IDs)
         const prevPlayerIds = prevState?.players.map(p => p.id).sort().join(',') || '';
-        const newPlayerIds = response.room.players.map(p => p.id).sort().join(',');
-        if (prevPlayerIds !== newPlayerIds || prevState?.players.length !== response.room.players.length) {
+        const newPlayerIds = syncedRoom.players.map(p => p.id).sort().join(',');
+        if (prevPlayerIds !== newPlayerIds || (prevState?.players.length ?? 0) !== syncedRoom.players.length) {
           console.log('Room component: Room state changed, updating from sync');
-          return response.room;
+          return syncedRoom;
         }
         return prevState;
       });
