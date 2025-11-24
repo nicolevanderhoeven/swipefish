@@ -1,3 +1,7 @@
+// Initialize OpenTelemetry BEFORE any other imports
+import { initializeInstrumentation } from './instrumentation';
+initializeInstrumentation();
+
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -25,6 +29,10 @@ app.use(express.json());
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Metrics endpoint (Prometheus will scrape this)
+// The PrometheusExporter in instrumentation.ts handles this automatically
+// This endpoint is just for documentation/clarity
 
 // Initialize database
 const databaseUrl = process.env.DATABASE_URL;

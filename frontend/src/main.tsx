@@ -1,3 +1,7 @@
+// Initialize Faro BEFORE React app
+import { initializeFaro } from './instrumentation';
+initializeFaro();
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
