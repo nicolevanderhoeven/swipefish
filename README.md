@@ -1,6 +1,6 @@
 # Swipefish
 
-A real-time multiplayer social deduction game for 3 players, inspired by Werewolf and Mafia, themed around online dating.
+A real-time multiplayer social deduction game for 3-7 players, inspired by Apples to Apples and Cards Against Humanity, themed around online dating.
 
 ## Architecture
 

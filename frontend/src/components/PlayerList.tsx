@@ -17,7 +17,7 @@ export function PlayerList({ players, currentSocketId }: PlayerListProps) {
 
   return (
     <div className="player-list">
-      <h3 className="player-list-title">Players ({players.length}/3)</h3>
+      <h3 className="player-list-title">Players ({players.length}/7)</h3>
       <ul className="player-list-items">
         {players.map((player) => (
           <li

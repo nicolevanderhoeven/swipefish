@@ -40,7 +40,7 @@ export function LandingPage() {
           className="landing-logo"
         />
         <h1 className="landing-title">Swipefish</h1>
-        <p className="landing-subtitle">A social deduction game for 3 players</p>
+        <p className="landing-subtitle">Dating, deception, and disastrously mismatched profiles</p>
         
         <div className="landing-form">
           <div className="form-group">
