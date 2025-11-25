@@ -376,17 +376,32 @@ export function initializeRoomHandlers(io: Server): void {
           return;
         }
 
-        logWithTrace('info', 'Found room for passphrase', { roomId: room.id, passphrase, roomStatus: room.status });
+        // Fetch fresh room state to ensure we have the latest status
+        const freshRoomState = await getRoomWithPlayers(room.id);
+        if (!freshRoomState) {
+          logWithTrace('error', 'Failed to load room state', { roomId: room.id, passphrase });
+          socket.emit('join-room-response', {
+            success: false,
+            error: 'Failed to load room state',
+          });
+          return;
+        }
+
+        logWithTrace('info', 'Found room for passphrase', { 
+          roomId: room.id, 
+          passphrase, 
+          roomStatus: freshRoomState.room.status 
+        });
 
         // Check if game is already in progress (status is 'active' or 'finished')
-        if (room.status === 'active' || room.status === 'finished') {
+        if (freshRoomState.room.status === 'active' || freshRoomState.room.status === 'finished') {
           // Check if this player is already in the room (reconnection case)
           const existingPlayers = await getPlayersInRoom(room.id);
           const isExistingPlayer = existingPlayers.some(p => p.socket_id === socket.id);
           
           logWithTrace('info', 'Game in progress, checking if player exists', { 
             roomId: room.id, 
-            status: room.status,
+            status: freshRoomState.room.status,
             socketId: socket.id,
             isExistingPlayer,
             existingPlayerCount: existingPlayers.length
@@ -396,7 +411,7 @@ export function initializeRoomHandlers(io: Server): void {
             logWithTrace('warn', 'Attempted to join room with game in progress', { 
               roomId: room.id, 
               passphrase,
-              status: room.status,
+              status: freshRoomState.room.status,
               socketId: socket.id
             });
             socket.emit('join-room-response', {
@@ -419,9 +434,10 @@ export function initializeRoomHandlers(io: Server): void {
         console.log(`Added player ${player.id} to room ${room.id}`);
 
         // Fetch FRESH room state from database (single source of truth)
-        const freshRoomState = await getRoomWithPlayers(room.id);
+        // Note: We may have already fetched this above, but fetch again to ensure we have the latest state
+        const updatedRoomState = await getRoomWithPlayers(room.id);
         
-        if (!freshRoomState) {
+        if (!updatedRoomState) {
           console.error(`Failed to load room state from database for room ${room.id}`);
           socket.emit('join-room-response', {
             success: false,
@@ -431,11 +447,11 @@ export function initializeRoomHandlers(io: Server): void {
         }
 
         // Update in-memory cache with fresh data from database
-        activeRooms.set(room.id, freshRoomState);
-        console.log(`Updated room state from database. Total players: ${freshRoomState.players.length}`);
+        activeRooms.set(room.id, updatedRoomState);
+        console.log(`Updated room state from database. Total players: ${updatedRoomState.players.length}`);
 
         // Check if player is already in room (for broadcast logic)
-        const alreadyInRoom = freshRoomState.players.find((p) => p.socket_id === socket.id);
+        const alreadyInRoom = updatedRoomState.players.find((p) => p.socket_id === socket.id);
         if (!alreadyInRoom) {
           console.log(`Warning: Player ${socket.id} not found in fresh room state after adding`);
         }
@@ -458,12 +474,12 @@ export function initializeRoomHandlers(io: Server): void {
         // Format fresh room state for JSON serialization (convert dates to strings)
         const formattedRoomState: RoomState = {
           room: {
-            ...freshRoomState.room,
-            created_at: freshRoomState.room.created_at instanceof Date 
-              ? freshRoomState.room.created_at.toISOString() 
-              : (freshRoomState.room.created_at as any),
+            ...updatedRoomState.room,
+            created_at: updatedRoomState.room.created_at instanceof Date 
+              ? updatedRoomState.room.created_at.toISOString() 
+              : (updatedRoomState.room.created_at as any),
           },
-          players: freshRoomState.players.map(p => ({
+          players: updatedRoomState.players.map(p => ({
             ...p,
             joined_at: p.joined_at instanceof Date 
               ? p.joined_at.toISOString() 
@@ -476,11 +492,11 @@ export function initializeRoomHandlers(io: Server): void {
           success: true,
           room: formattedRoomState as any,
         });
-        console.log(`Sent join-room-response to ${socket.id} with ${freshRoomState.players.length} players`);
+        console.log(`Sent join-room-response to ${socket.id} with ${updatedRoomState.players.length} players`);
 
         // Broadcast to ALL players in the room (including Player 1 if they're still connected)
         // Find the player that just joined for the broadcast
-        const joinedPlayer = freshRoomState.players.find((p) => p.socket_id === socket.id);
+        const joinedPlayer = updatedRoomState.players.find((p) => p.socket_id === socket.id);
         
         // Get list of sockets in room before broadcasting to verify who will receive it
         const socketsInRoomForBroadcast = await io.in(room.id).fetchSockets();
@@ -493,7 +509,7 @@ export function initializeRoomHandlers(io: Server): void {
         // CRITICAL FIX: Ensure all connected players' sockets are in the socket.io room
         // If a player's socket is connected but not in the room, join them to the room
         // This handles the case where P1's socket reconnected but didn't rejoin the room
-        for (const player of freshRoomState.players) {
+        for (const player of updatedRoomState.players) {
           if (player.socket_id === socket.id) {
             continue; // Skip the joining player
           }
@@ -539,7 +555,7 @@ export function initializeRoomHandlers(io: Server): void {
           // Strategy 2: Direct emission to each existing player (fallback)
           // This ensures delivery even if socket isn't in socket.io room
           let directEmissionCount = 0;
-          for (const player of freshRoomState.players) {
+          for (const player of updatedRoomState.players) {
             if (player.socket_id === socket.id) {
               continue; // Skip the joining player
             }
@@ -566,7 +582,7 @@ export function initializeRoomHandlers(io: Server): void {
           
           // Send directly to all other players
           let sentCount = 0;
-          for (const player of freshRoomState.players) {
+          for (const player of updatedRoomState.players) {
             if (player.socket_id === socket.id) {
               continue;
             }
@@ -588,7 +604,7 @@ export function initializeRoomHandlers(io: Server): void {
         
         span.setAttributes({
           'room.id': room.id,
-          'room.players.count': freshRoomState.players.length,
+          'room.players.count': updatedRoomState.players.length,
         });
         span.setStatus({ code: SpanStatusCode.OK });
         span.end();
