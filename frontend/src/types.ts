@@ -57,3 +57,9 @@ export interface StartGameResponse {
   error?: string;
 }
 
+export type PlayerRole = 'swiper' | 'swipefish' | 'match';
+
+export interface RoleAssignmentEvent {
+  role: PlayerRole;
+}
+

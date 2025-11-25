@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
 import { PlayerList } from '../components/PlayerList';
-import { RoomState, PlayerJoinedEvent, PlayerLeftEvent, JoinRoomResponse, RoomStateSyncResponse, GameStartedEvent, StartGameResponse } from '../types';
+import { RoomState, PlayerJoinedEvent, PlayerLeftEvent, JoinRoomResponse, RoomStateSyncResponse, GameStartedEvent, StartGameResponse, RoleAssignmentEvent, PlayerRole } from '../types';
 import { getPlayerName } from '../utils/playerName';
 import './Room.css';
 
@@ -13,6 +13,7 @@ export function Room() {
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isStartingGame, setIsStartingGame] = useState(false);
+  const [playerRole, setPlayerRole] = useState<PlayerRole | null>(null);
   const navigate = useNavigate();
 
   // Use useCallback to stabilize handler functions so they can be properly removed
@@ -89,6 +90,11 @@ export function Room() {
     }
   }, []);
 
+  const handleRoleAssigned = useCallback((event: RoleAssignmentEvent) => {
+    console.log('Room component: Received role assignment', event.role);
+    setPlayerRole(event.role);
+  }, []);
+
   useEffect(() => {
     if (!socket || !isConnected || !passphrase) return;
 
@@ -99,6 +105,7 @@ export function Room() {
     socket.on('room-state-sync', handleRoomStateSync);
     socket.on('game-started', handleGameStarted);
     socket.on('start-game-response', handleStartGameResponse);
+    socket.on('role-assigned', handleRoleAssigned);
 
     // Always emit join-room when the component loads to ensure:
     // 1. The socket is in the socket.io room (even if it reconnected)
@@ -122,8 +129,9 @@ export function Room() {
       socket.off('room-state-sync', handleRoomStateSync);
       socket.off('game-started', handleGameStarted);
       socket.off('start-game-response', handleStartGameResponse);
+      socket.off('role-assigned', handleRoleAssigned);
     };
-  }, [socket, isConnected, passphrase, handleJoinRoomResponse, handlePlayerJoined, handlePlayerLeft, handleRoomStateSync, handleGameStarted, handleStartGameResponse]);
+  }, [socket, isConnected, passphrase, handleJoinRoomResponse, handlePlayerJoined, handlePlayerLeft, handleRoomStateSync, handleGameStarted, handleStartGameResponse, handleRoleAssigned]);
 
   // Periodic room state sync - self-healing mechanism
   useEffect(() => {
@@ -246,6 +254,16 @@ export function Room() {
         {roomState.room.status === 'active' && (
           <div className="game-status-section">
             <p className="game-active-message">🎮 Game is in progress!</p>
+            {playerRole && (
+              <div className="role-display">
+                <p className="role-label">Your Role:</p>
+                <p className={`role-value role-${playerRole}`}>
+                  {playerRole === 'swiper' && '👤 Swiper'}
+                  {playerRole === 'swipefish' && '🐟 Swipefish'}
+                  {playerRole === 'match' && '💘 Match'}
+                </p>
+              </div>
+            )}
           </div>
         )}
         

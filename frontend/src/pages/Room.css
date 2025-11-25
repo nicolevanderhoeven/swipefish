@@ -138,10 +138,44 @@
 }
 
 .game-active-message {
-  margin: 0;
+  margin: 0 0 1rem 0;
   color: #667eea;
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+.role-display {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #667eea;
+}
+
+.role-label {
+  margin: 0 0 0.5rem 0;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.role-value {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.role-swiper {
+  color: #667eea;
+}
+
+.role-swipefish {
+  color: #f59e0b;
+}
+
+.role-match {
+  color: #ec4899;
 }
 
 .start-game-button {

@@ -13,7 +13,7 @@ import {
   updateRoomStatus,
 } from './db';
 import { generatePassphrase } from './passphrase';
-import { RoomState, GameStartedEvent } from './types';
+import { RoomState, GameStartedEvent, PlayerRole, RoleAssignmentEvent } from './types';
 
 const tracer = trace.getTracer('swipefish-rooms', '1.0.0');
 
@@ -693,6 +693,26 @@ export function initializeRoomHandlers(io: Server): void {
       }
     });
 
+    // Function to assign roles to players
+    function assignRoles(players: { id: string; socket_id: string }[]): Map<string, PlayerRole> {
+      const roleAssignments = new Map<string, PlayerRole>();
+      const shuffled = [...players].sort(() => Math.random() - 0.5);
+      
+      // Always assign: 1 Swiper, 1 Swipefish, rest are Matches
+      if (shuffled.length > 0) {
+        roleAssignments.set(shuffled[0].socket_id, 'swiper');
+      }
+      if (shuffled.length > 1) {
+        roleAssignments.set(shuffled[1].socket_id, 'swipefish');
+      }
+      // Remaining players are Matches
+      for (let i = 2; i < shuffled.length; i++) {
+        roleAssignments.set(shuffled[i].socket_id, 'match');
+      }
+      
+      return roleAssignments;
+    }
+
     socket.on('start-game', async (data: { roomId: string }) => {
       const span = tracer.startSpan('socket.io.start-game', {
         attributes: {
@@ -804,6 +824,27 @@ export function initializeRoomHandlers(io: Server): void {
           const targetSocket = io.sockets.sockets.get(player.socket_id);
           if (targetSocket) {
             targetSocket.join(roomId);
+          }
+        }
+
+        // Assign roles to players: 1 Swiper, 1 Swipefish, X-2 Matches
+        const roleAssignments = assignRoles(updatedRoomState.players);
+        
+        // Send role assignment to each player individually
+        for (const player of updatedRoomState.players) {
+          const role = roleAssignments.get(player.socket_id);
+          if (role) {
+            const targetSocket = io.sockets.sockets.get(player.socket_id);
+            if (targetSocket) {
+              const roleAssignmentEvent: RoleAssignmentEvent = { role };
+              targetSocket.emit('role-assigned', roleAssignmentEvent);
+              logWithTrace('info', 'Sent role assignment to player', {
+                roomId,
+                playerId: player.id,
+                socketId: player.socket_id,
+                role,
+              });
+            }
           }
         }
 
