@@ -376,13 +376,21 @@ export function initializeRoomHandlers(io: Server): void {
           return;
         }
 
-        logWithTrace('info', 'Found room for passphrase', { roomId: room.id, passphrase });
+        logWithTrace('info', 'Found room for passphrase', { roomId: room.id, passphrase, roomStatus: room.status });
 
-        // Check if game is already in progress
-        if (room.status !== 'waiting') {
+        // Check if game is already in progress (status is 'active' or 'finished')
+        if (room.status === 'active' || room.status === 'finished') {
           // Check if this player is already in the room (reconnection case)
           const existingPlayers = await getPlayersInRoom(room.id);
           const isExistingPlayer = existingPlayers.some(p => p.socket_id === socket.id);
+          
+          logWithTrace('info', 'Game in progress, checking if player exists', { 
+            roomId: room.id, 
+            status: room.status,
+            socketId: socket.id,
+            isExistingPlayer,
+            existingPlayerCount: existingPlayers.length
+          });
           
           if (!isExistingPlayer) {
             logWithTrace('warn', 'Attempted to join room with game in progress', { 
