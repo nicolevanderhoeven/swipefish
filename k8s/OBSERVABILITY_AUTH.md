@@ -68,3 +68,4 @@ If you want to keep using LoadBalancer directly:
 
 For production, use **Option 1 (Basic Auth via Ingress)** as it's the simplest and most secure approach that works well with Grafana Cloud.
 
+
