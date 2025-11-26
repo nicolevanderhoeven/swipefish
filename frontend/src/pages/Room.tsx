@@ -57,6 +57,7 @@ export function Room() {
       const syncedRoom = response.room; // Capture in local variable for type narrowing
       console.log('Room component: Received room-state-sync', syncedRoom);
       console.log('Room component: Sync - Room.room object:', syncedRoom.room);
+      console.log('Room component: Sync - Full room object JSON:', JSON.stringify(syncedRoom.room, null, 2));
       console.log('Room component: Sync - Persona fields:', {
         personaNumber: syncedRoom.room.swiper_persona_number,
         personaName: syncedRoom.room.swiper_persona_name,
