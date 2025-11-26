@@ -271,34 +271,48 @@ export function Room() {
   };
 
   // Extract persona data for rendering (computed outside JSX for Safari compatibility)
+  // Using explicit property access to avoid Safari issues with optional chaining
   const personaData = useMemo(() => {
-    if (!roomState || roomState.room.status !== 'active') {
+    if (!roomState) {
       return null;
     }
     
-    const room = roomState.room as any;
-    const personaNumber = room.swiper_persona_number || room.swiperPersonaNumber;
-    const personaName = room.swiper_persona_name || room.swiperPersonaName;
-    const personaTagline = room.swiper_persona_tagline || room.swiperPersonaTagline;
-    const hasPersona = !!(personaName && personaTagline && personaNumber);
-    
-    // Log for debugging - this should show for ALL players
-    if (hasPersona) {
-      console.log('Room component: Rendering - Persona data found:', {
-        playerRole,
-        personaNumber,
-        personaName,
-        personaTagline,
-        allKeys: Object.keys(roomState.room),
-      });
-    } else {
-      console.warn('Room component: Persona data missing!', {
-        room: roomState.room,
-        allKeys: Object.keys(roomState.room),
-      });
+    if (roomState.room.status !== 'active') {
+      return null;
     }
     
-    return hasPersona ? { personaNumber, personaName, personaTagline } : null;
+    // Use explicit property access - Safari can be finicky with type assertions
+    const room = roomState.room;
+    const personaNumber = (room as any).swiper_persona_number || (room as any).swiperPersonaNumber || null;
+    const personaName = (room as any).swiper_persona_name || (room as any).swiperPersonaName || null;
+    const personaTagline = (room as any).swiper_persona_tagline || (room as any).swiperPersonaTagline || null;
+    
+    // Explicit check for all three fields
+    const hasPersona = personaNumber !== null && personaName !== null && personaTagline !== null && 
+                       personaNumber !== undefined && personaName !== undefined && personaTagline !== undefined &&
+                       personaNumber !== '' && personaName !== '' && personaTagline !== '';
+    
+    // Log for debugging - this should show for ALL players
+    console.log('Room component: Persona computation:', {
+      playerRole,
+      personaNumber,
+      personaName,
+      personaTagline,
+      hasPersona,
+      roomStatus: roomState.room.status,
+      allKeys: Object.keys(roomState.room),
+      roomStringified: JSON.stringify(roomState.room),
+    });
+    
+    if (hasPersona) {
+      return {
+        personaNumber: String(personaNumber),
+        personaName: String(personaName),
+        personaTagline: String(personaTagline),
+      };
+    }
+    
+    return null;
   }, [roomState, playerRole]);
 
   const handleStartGame = () => {
@@ -352,7 +366,7 @@ export function Room() {
         {roomState.room.status === 'active' && (
           <div className="game-status-section">
             <p className="game-active-message">🎮 Game is in progress!</p>
-            {personaData && (
+            {personaData !== null ? (
               <div className="swiper-persona-card">
                 <p className="swiper-persona-label">Swiper's Persona:</p>
                 <div className="swiper-persona-content">
@@ -372,7 +386,7 @@ export function Room() {
                   <p className="swiper-persona-tagline">"{personaData.personaTagline || ''}"</p>
                 </div>
               </div>
-            )}
+            ) : null}
             {playerRole && (
               <div className="role-display">
                 <p className="role-label">Your Role:</p>
