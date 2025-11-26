@@ -79,18 +79,28 @@ export function Room() {
         const newPersonaNumber = syncedRoom.room.swiper_persona_number || null;
         const prevPersonaName = prevState?.room.swiper_persona_name || null;
         const newPersonaName = syncedRoom.room.swiper_persona_name || null;
-        const personaChanged = prevPersonaNumber !== newPersonaNumber || prevPersonaName !== newPersonaName;
+        const prevPersonaTagline = prevState?.room.swiper_persona_tagline || null;
+        const newPersonaTagline = syncedRoom.room.swiper_persona_tagline || null;
+        const personaChanged = prevPersonaNumber !== newPersonaNumber || prevPersonaName !== newPersonaName || prevPersonaTagline !== newPersonaTagline;
         
-        if (playerIdsChanged || playerCountChanged || statusChanged || personaChanged) {
+        // Always update if persona data exists in sync but not in current state
+        const hasPersonaInSync = !!(newPersonaNumber && newPersonaName && newPersonaTagline);
+        const hasPersonaInState = !!(prevPersonaNumber && prevPersonaName && prevPersonaTagline);
+        const personaAppeared = hasPersonaInSync && !hasPersonaInState;
+        
+        if (playerIdsChanged || playerCountChanged || statusChanged || personaChanged || personaAppeared) {
           console.log('Room component: Room state changed, updating from sync', {
             playerIdsChanged,
             playerCountChanged,
             statusChanged,
             personaChanged,
+            personaAppeared,
             prevStatus,
             newStatus,
             prevPersonaName,
             newPersonaName,
+            hasPersonaInSync,
+            hasPersonaInState,
           });
           
           // If game status changed to active and we don't have a role yet, 
