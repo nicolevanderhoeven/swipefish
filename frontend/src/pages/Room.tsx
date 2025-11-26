@@ -353,21 +353,21 @@ export function Room() {
         id="safari-debug" 
         style={{ 
           position: 'fixed', 
-          top: 0, 
+          top: '40px',
           left: 0, 
           right: 0,
-          background: 'yellow', 
+          background: 'lime', 
           padding: '10px', 
           zIndex: 99999, 
           fontSize: '14px',
           fontWeight: 'bold',
-          border: '3px solid red',
+          border: '3px solid blue',
           display: 'block'
         }}
       >
-        Loading debug info...
+        REACT DEBUG: Persona={personaData ? 'YES' : 'NO'} | Status={roomState?.room.status || 'unknown'}
       </div>
-      <div className="room-content" style={{ marginTop: '50px' }}>
+      <div className="room-content" style={{ marginTop: '100px' }}>
         <h1 className="room-title">Room</h1>
         
         <div className="passphrase-section">

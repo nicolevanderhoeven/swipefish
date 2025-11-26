@@ -4,9 +4,28 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>Swipefish</title>
+    <style>
+      #static-debug {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: yellow;
+        padding: 10px;
+        z-index: 999999;
+        font-size: 14px;
+        font-weight: bold;
+        border: 3px solid red;
+        text-align: center;
+      }
+    </style>
   </head>
   <body>
+    <div id="static-debug">STATIC DEBUG: If you see this, HTML loaded. Build: 2025-11-26-22:55</div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
