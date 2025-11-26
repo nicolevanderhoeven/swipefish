@@ -327,7 +327,19 @@ export function Room() {
               const personaNumber = (roomState.room as any).swiper_persona_number || (roomState.room as any).swiperPersonaNumber;
               const personaName = (roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName;
               const personaTagline = (roomState.room as any).swiper_persona_tagline || (roomState.room as any).swiperPersonaTagline;
-              return personaName && personaTagline && personaNumber;
+              const shouldShow = !!(personaName && personaTagline && personaNumber);
+              
+              // Log for debugging - this should show for ALL players
+              console.log('Room component: Persona visibility check:', {
+                playerRole,
+                personaNumber,
+                personaName,
+                personaTagline,
+                shouldShow,
+                roomStatus: roomState.room.status,
+              });
+              
+              return shouldShow;
             })() && (
               <div className="swiper-persona-card">
                 <p className="swiper-persona-label">Swiper's Persona:</p>
