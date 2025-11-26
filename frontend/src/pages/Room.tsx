@@ -368,18 +368,19 @@ export function Room() {
                   </div>
                 </div>
               )}
-            {playerRole && (
-              <div className="role-display">
-                <p className="role-label">Your Role:</p>
-                <p className={`role-value role-${playerRole}`}>
-                  {playerRole === 'swiper' && '👤 Swiper'}
-                  {playerRole === 'swipefish' && '🐟 Swipefish'}
-                  {playerRole === 'match' && '💘 Match'}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+              {playerRole && (
+                <div className="role-display">
+                  <p className="role-label">Your Role:</p>
+                  <p className={`role-value role-${playerRole}`}>
+                    {playerRole === 'swiper' && '👤 Swiper'}
+                    {playerRole === 'swipefish' && '🐟 Swipefish'}
+                    {playerRole === 'match' && '💘 Match'}
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         
         <div className="room-actions">
           {roomState.room.status === 'waiting' && (
