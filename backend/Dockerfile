@@ -12,6 +12,8 @@ RUN npm ci
 
 # Copy source code
 COPY src/ ./src/
+# Copy personas CSV file (needed at runtime)
+COPY img/ ./img/
 
 # Build TypeScript
 RUN npm run build
@@ -29,6 +31,8 @@ RUN npm ci --only=production
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
+# Copy personas CSV file (needed at runtime)
+COPY --from=builder /app/img ./img
 
 # Expose port
 EXPOSE 3000
