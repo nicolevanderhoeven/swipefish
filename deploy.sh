@@ -30,7 +30,6 @@ echo "🏗️  Step 3: Building backend Docker image..."
 docker build --platform=linux/amd64 -f backend/Dockerfile -t ${DOCKER_HUB_USERNAME}/swipefish-backend:latest .
 echo "📤 Pushing backend image to Docker Hub..."
 docker push ${DOCKER_HUB_USERNAME}/swipefish-backend:latest
-cd ..
 
 # Step 4: Build and push frontend image
 echo ""

@@ -75,7 +75,8 @@ export function loadPersonas(): PersonaCard[] {
     return cachedPersonas;
   }
 
-  const csvPath = path.join(__dirname, '../../img/personas/swipefish_personas.csv');
+  // __dirname is /app/dist in production, so we need to go up one level to /app, then into img
+  const csvPath = path.join(__dirname, '../img/personas/swipefish_personas.csv');
   
   try {
     const csvContent = fs.readFileSync(csvPath, 'utf-8');
