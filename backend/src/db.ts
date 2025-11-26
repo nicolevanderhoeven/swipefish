@@ -58,9 +58,9 @@ export async function createTables(): Promise<void> {
       passphrase VARCHAR(255) UNIQUE NOT NULL,
       created_at TIMESTAMP DEFAULT NOW(),
       status VARCHAR(50) DEFAULT 'waiting',
-      swiper_role_number VARCHAR(10),
-      swiper_role_name VARCHAR(255),
-      swiper_role_tagline TEXT
+      swiper_persona_number VARCHAR(10),
+      swiper_persona_name VARCHAR(255),
+      swiper_persona_tagline TEXT
     )
   `);
 
@@ -90,21 +90,37 @@ export async function createTables(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_rooms_passphrase ON rooms(passphrase)
   `);
 
-  // Add swiper role columns if they don't exist (for existing databases)
+  // Add swiper persona columns if they don't exist (for existing databases)
   await dbPool.query(`
     ALTER TABLE rooms 
-    ADD COLUMN IF NOT EXISTS swiper_role_number VARCHAR(10)
+    ADD COLUMN IF NOT EXISTS swiper_persona_number VARCHAR(10)
   `);
 
   await dbPool.query(`
     ALTER TABLE rooms 
-    ADD COLUMN IF NOT EXISTS swiper_role_name VARCHAR(255)
+    ADD COLUMN IF NOT EXISTS swiper_persona_name VARCHAR(255)
   `);
 
   await dbPool.query(`
     ALTER TABLE rooms 
-    ADD COLUMN IF NOT EXISTS swiper_role_tagline TEXT
+    ADD COLUMN IF NOT EXISTS swiper_persona_tagline TEXT
   `);
+
+  // Migration: Copy data from old swiper_role_* columns to new swiper_persona_* columns if they exist
+  // This handles the transition from "role" to "persona" naming
+  try {
+    await dbPool.query(`
+      UPDATE rooms 
+      SET swiper_persona_number = swiper_role_number,
+          swiper_persona_name = swiper_role_name,
+          swiper_persona_tagline = swiper_role_tagline
+      WHERE (swiper_persona_number IS NULL OR swiper_persona_name IS NULL OR swiper_persona_tagline IS NULL)
+        AND (swiper_role_number IS NOT NULL OR swiper_role_name IS NOT NULL OR swiper_role_tagline IS NOT NULL)
+    `);
+  } catch (error) {
+    // Ignore errors if old columns don't exist (fresh database)
+    console.log('Migration: Old swiper_role_* columns not found, skipping migration');
+  }
 }
 
 export async function createRoom(passphrase: string): Promise<Room> {
@@ -245,12 +261,12 @@ export async function clearPlayerRolesInRoom(roomId: string): Promise<void> {
   );
 }
 
-export async function updateSwiperRole(roomId: string, roleNumber: string, roleName: string, roleTagline: string): Promise<void> {
+export async function updateSwiperPersona(roomId: string, personaNumber: string, personaName: string, personaTagline: string): Promise<void> {
   const dbPool = ensurePoolInitialized();
 
   await dbPool.query(
-    'UPDATE rooms SET swiper_role_number = $1, swiper_role_name = $2, swiper_role_tagline = $3 WHERE id = $4',
-    [roleNumber, roleName, roleTagline, roomId]
+    'UPDATE rooms SET swiper_persona_number = $1, swiper_persona_name = $2, swiper_persona_tagline = $3 WHERE id = $4',
+    [personaNumber, personaName, personaTagline, roomId]
   );
 }
 

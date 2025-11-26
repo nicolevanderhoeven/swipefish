@@ -1,13 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-export interface RoleCard {
-  roleNumber: string;
-  role: string;
+export interface PersonaCard {
+  personaNumber: string;
+  persona: string;
   tagline: string;
 }
 
-let cachedRoles: RoleCard[] | null = null;
+let cachedPersonas: PersonaCard[] | null = null;
 
 /**
  * Parses a CSV field, handling quoted fields with escaped quotes.
@@ -66,16 +66,16 @@ function parseCsvField(line: string, startIndex: number): { value: string; nextI
 }
 
 /**
- * Loads role cards from the CSV file.
+ * Loads persona cards from the CSV file.
  * Results are cached after first load.
- * CSV format: Role Number,"Role","Tagline"
+ * CSV format: Persona Number,"Persona","Tagline"
  */
-export function loadRoles(): RoleCard[] {
-  if (cachedRoles) {
-    return cachedRoles;
+export function loadPersonas(): PersonaCard[] {
+  if (cachedPersonas) {
+    return cachedPersonas;
   }
 
-  const csvPath = path.join(__dirname, '../../img/roles/swipefish_roles.csv');
+  const csvPath = path.join(__dirname, '../../img/personas/swipefish_personas.csv');
   
   try {
     const csvContent = fs.readFileSync(csvPath, 'utf-8');
@@ -84,24 +84,24 @@ export function loadRoles(): RoleCard[] {
     // Skip header line
     const dataLines = lines.slice(1);
     
-    const roles: RoleCard[] = [];
+    const personas: PersonaCard[] = [];
     
     for (const line of dataLines) {
       let index = 0;
       
-      // Parse role number (first field, unquoted)
-      const roleNumberResult = parseCsvField(line, index);
-      const roleNumber = roleNumberResult.value.trim();
-      index = roleNumberResult.nextIndex;
+      // Parse persona number (first field, unquoted)
+      const personaNumberResult = parseCsvField(line, index);
+      const personaNumber = personaNumberResult.value.trim();
+      index = personaNumberResult.nextIndex;
       
-      // Parse role (second field, quoted)
-      const roleResult = parseCsvField(line, index);
-      let role = roleResult.value.trim();
+      // Parse persona (second field, quoted)
+      const personaResult = parseCsvField(line, index);
+      let persona = personaResult.value.trim();
       // Remove quotes if present (shouldn't be needed with proper parsing, but just in case)
-      if (role.startsWith('"') && role.endsWith('"')) {
-        role = role.slice(1, -1);
+      if (persona.startsWith('"') && persona.endsWith('"')) {
+        persona = persona.slice(1, -1);
       }
-      index = roleResult.nextIndex;
+      index = personaResult.nextIndex;
       
       // Parse tagline (third field, quoted)
       const taglineResult = parseCsvField(line, index);
@@ -111,51 +111,51 @@ export function loadRoles(): RoleCard[] {
         tagline = tagline.slice(1, -1);
       }
       
-      if (roleNumber && role && tagline) {
-        roles.push({ roleNumber, role, tagline });
+      if (personaNumber && persona && tagline) {
+        personas.push({ personaNumber, persona, tagline });
       }
     }
     
-    cachedRoles = roles;
-    console.log(`Loaded ${roles.length} role cards from CSV`);
-    return roles;
+    cachedPersonas = personas;
+    console.log(`Loaded ${personas.length} persona cards from CSV`);
+    return personas;
   } catch (error) {
-    console.error('Error loading roles from CSV:', error);
-    throw new Error('Failed to load role cards');
+    console.error('Error loading personas from CSV:', error);
+    throw new Error('Failed to load persona cards');
   }
 }
 
 /**
- * Randomly selects a role card from the first 29 roles (R001-R029).
- * Only these roles have corresponding images available.
+ * Randomly selects a persona card from the first 29 personas (P001-P029).
+ * Only these personas have corresponding images available.
  */
-export function selectRandomRole(): RoleCard {
-  const roles = loadRoles();
-  if (roles.length === 0) {
-    throw new Error('No role cards available');
+export function selectRandomPersona(): PersonaCard {
+  const personas = loadPersonas();
+  if (personas.length === 0) {
+    throw new Error('No persona cards available');
   }
   
-  // Only use first 29 roles (R001-R029) which have images
-  const availableRoles = roles.slice(0, 29);
-  if (availableRoles.length === 0) {
-    throw new Error('No role cards available (first 29 roles)');
+  // Only use first 29 personas (P001-P029) which have images
+  const availablePersonas = personas.slice(0, 29);
+  if (availablePersonas.length === 0) {
+    throw new Error('No persona cards available (first 29 personas)');
   }
   
-  const randomIndex = Math.floor(Math.random() * availableRoles.length);
-  return availableRoles[randomIndex];
+  const randomIndex = Math.floor(Math.random() * availablePersonas.length);
+  return availablePersonas[randomIndex];
 }
 
 /**
- * Constructs the image filename for a role card.
- * Pattern: R{number}_{Role_Name}.png
- * Example: R001_Crypto_Bro.png, R002_Life_Coach_At_23.png
+ * Constructs the image filename for a persona card.
+ * Pattern: P{number}_{Persona_Name}.png
+ * Example: P001_Crypto_Bro.png, P002_Life_Coach_At_23.png
  */
-export function getRoleImageFilename(roleNumber: string, roleName: string): string {
-  // Convert role name to filename format:
+export function getPersonaImageFilename(personaNumber: string, personaName: string): string {
+  // Convert persona name to filename format:
   // - Remove parentheses but keep their contents
   // - Replace spaces with underscores
   // - Remove other special characters except underscores
-  let sanitized = roleName
+  let sanitized = personaName
     .replace(/\(/g, '') // Remove opening parentheses
     .replace(/\)/g, '') // Remove closing parentheses
     .replace(/\s+/g, '_') // Replace spaces with underscores
@@ -163,6 +163,6 @@ export function getRoleImageFilename(roleNumber: string, roleName: string): stri
     .replace(/_+/g, '_') // Replace multiple underscores with single
     .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
   
-  return `${roleNumber}_${sanitized}.png`;
+  return `${personaNumber}_${sanitized}.png`;
 }
 

@@ -13,9 +13,9 @@ import {
   updateRoomStatus,
   updatePlayerRole,
   clearPlayerRolesInRoom,
-  updateSwiperRole,
+  updateSwiperPersona,
 } from './db';
-import { selectRandomRole } from './roles';
+import { selectRandomPersona } from './personas';
 import { generatePassphrase } from './passphrase';
 import { RoomState, GameStartedEvent, PlayerRole, RoleAssignmentEvent } from './types';
 
@@ -872,14 +872,14 @@ export function initializeRoomHandlers(io: Server): void {
         await updateRoomStatus(roomId, 'active');
         logWithTrace('info', 'Updated room status to active', { roomId });
 
-        // Select and store a random role card for the Swiper
-        const selectedRole = selectRandomRole();
-        await updateSwiperRole(roomId, selectedRole.roleNumber, selectedRole.role, selectedRole.tagline);
-        logWithTrace('info', 'Selected and stored Swiper role card', {
+        // Select and store a random persona card for the Swiper
+        const selectedPersona = selectRandomPersona();
+        await updateSwiperPersona(roomId, selectedPersona.personaNumber, selectedPersona.persona, selectedPersona.tagline);
+        logWithTrace('info', 'Selected and stored Swiper persona card', {
           roomId,
-          roleNumber: selectedRole.roleNumber,
-          role: selectedRole.role,
-          tagline: selectedRole.tagline,
+          personaNumber: selectedPersona.personaNumber,
+          persona: selectedPersona.persona,
+          tagline: selectedPersona.tagline,
         });
 
         // Fetch fresh room state after update

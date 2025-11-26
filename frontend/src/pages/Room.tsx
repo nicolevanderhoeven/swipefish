@@ -5,7 +5,7 @@ import { Logo } from '../components/Logo';
 import { PlayerList } from '../components/PlayerList';
 import { RoomState, PlayerJoinedEvent, PlayerLeftEvent, JoinRoomResponse, RoomStateSyncResponse, GameStartedEvent, StartGameResponse, RoleAssignmentEvent, PlayerRole } from '../types';
 import { getPlayerName } from '../utils/playerName';
-import { getRoleImagePath } from '../utils/roleImage';
+import { getPersonaImagePath } from '../utils/personaImage';
 import './Room.css';
 
 export function Room() {
@@ -279,21 +279,21 @@ export function Room() {
         {roomState.room.status === 'active' && (
           <div className="game-status-section">
             <p className="game-active-message">🎮 Game is in progress!</p>
-            {roomState.room.swiper_role_name && roomState.room.swiper_role_tagline && roomState.room.swiper_role_number && (
-              <div className="swiper-role-card">
-                <p className="swiper-role-label">Swiper's Role:</p>
-                <div className="swiper-role-content">
+            {roomState.room.swiper_persona_name && roomState.room.swiper_persona_tagline && roomState.room.swiper_persona_number && (
+              <div className="swiper-persona-card">
+                <p className="swiper-persona-label">Swiper's Persona:</p>
+                <div className="swiper-persona-content">
                   <img
-                    src={getRoleImagePath(roomState.room.swiper_role_number, roomState.room.swiper_role_name)}
-                    alt={roomState.room.swiper_role_name}
-                    className="swiper-role-image"
+                    src={getPersonaImagePath(roomState.room.swiper_persona_number, roomState.room.swiper_persona_name)}
+                    alt={roomState.room.swiper_persona_name}
+                    className="swiper-persona-image"
                     onError={(e) => {
                       // Hide image if it fails to load
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
-                  <p className="swiper-role-name">{roomState.room.swiper_role_name}</p>
-                  <p className="swiper-role-tagline">"{roomState.room.swiper_role_tagline}"</p>
+                  <p className="swiper-persona-name">{roomState.room.swiper_persona_name}</p>
+                  <p className="swiper-persona-tagline">"{roomState.room.swiper_persona_tagline}"</p>
                 </div>
               </div>
             )}
