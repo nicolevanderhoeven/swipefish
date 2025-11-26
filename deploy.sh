@@ -35,11 +35,9 @@ cd ..
 # Step 4: Build and push frontend image
 echo ""
 echo "🏗️  Step 4: Building frontend Docker image..."
-cd frontend
-docker build --platform=linux/amd64 --build-arg VITE_SOCKET_URL=wss://swipe.fish -t ${DOCKER_HUB_USERNAME}/swipefish-frontend:latest .
+docker build --platform=linux/amd64 -f frontend/Dockerfile --build-arg VITE_SOCKET_URL=wss://swipe.fish -t ${DOCKER_HUB_USERNAME}/swipefish-frontend:latest .
 echo "📤 Pushing frontend image to Docker Hub..."
 docker push ${DOCKER_HUB_USERNAME}/swipefish-frontend:latest
-cd ..
 
 # Step 5: Update deployment files with Docker Hub images
 echo ""
