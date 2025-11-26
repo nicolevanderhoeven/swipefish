@@ -56,11 +56,35 @@ export function Room() {
       const syncedRoom = response.room; // Capture in local variable for type narrowing
       console.log('Room component: Received room-state-sync', syncedRoom);
       setRoomState((prevState) => {
-        // Only update if the state actually changed (different player count or different player IDs)
+        // Check if state changed: player count, player IDs, or room status
         const prevPlayerIds = prevState?.players.map(p => p.id).sort().join(',') || '';
         const newPlayerIds = syncedRoom.players.map(p => p.id).sort().join(',');
-        if (prevPlayerIds !== newPlayerIds || (prevState?.players.length ?? 0) !== syncedRoom.players.length) {
-          console.log('Room component: Room state changed, updating from sync');
+        const prevStatus = prevState?.room.status || 'waiting';
+        const newStatus = syncedRoom.room.status;
+        const playerCountChanged = (prevState?.players.length ?? 0) !== syncedRoom.players.length;
+        const playerIdsChanged = prevPlayerIds !== newPlayerIds;
+        const statusChanged = prevStatus !== newStatus;
+        
+        if (playerIdsChanged || playerCountChanged || statusChanged) {
+          console.log('Room component: Room state changed, updating from sync', {
+            playerIdsChanged,
+            playerCountChanged,
+            statusChanged,
+            prevStatus,
+            newStatus,
+          });
+          
+          // If game status changed to active and we don't have a role yet, 
+          // the backend will send it via role-assigned event during sync
+          if (statusChanged && newStatus === 'active' && !playerRole) {
+            console.log('Room component: Game became active, waiting for role assignment');
+          }
+          
+          // If game status changed back to waiting, clear role
+          if (statusChanged && newStatus !== 'active') {
+            setPlayerRole(null);
+          }
+          
           return syncedRoom;
         }
         return prevState;
@@ -68,7 +92,7 @@ export function Room() {
     } else {
       console.log('Room component: Room state sync failed', response.error);
     }
-  }, []);
+  }, [playerRole]);
 
   const handleGameStarted = useCallback((event: GameStartedEvent) => {
     console.log('Room component: Received game-started event', event);

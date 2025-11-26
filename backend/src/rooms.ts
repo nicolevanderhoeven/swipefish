@@ -45,6 +45,10 @@ function logWithTrace(level: 'info' | 'error' | 'warn', message: string, metadat
 // In-memory room state for active rooms
 const activeRooms = new Map<string, RoomState>();
 
+// In-memory role assignments: roomId -> playerId -> role
+// Using playerId instead of socketId because playerId is stable across reconnections
+const roleAssignments = new Map<string, Map<string, PlayerRole>>();
+
 async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socket): Promise<void> {
   const span = tracer.startSpan('socket.io.remove-player', {
     attributes: {
@@ -683,6 +687,29 @@ export function initializeRoomHandlers(io: Server): void {
           room: formattedRoomState as any,
         });
 
+        // If game is active, also send role assignment if it exists
+        // Look up player by current socket_id, then get role by player.id
+        if (freshRoomState.room.status === 'active') {
+          const roomRoleMap = roleAssignments.get(roomId);
+          if (roomRoleMap) {
+            // Find the player with this socket_id
+            const player = freshRoomState.players.find(p => p.socket_id === socket.id);
+            if (player) {
+              const role = roomRoleMap.get(player.id);
+              if (role) {
+                const roleAssignmentEvent: RoleAssignmentEvent = { role };
+                socket.emit('role-assigned', roleAssignmentEvent);
+                logWithTrace('info', 'Sent role assignment during sync', {
+                  roomId,
+                  playerId: player.id,
+                  socketId: socket.id,
+                  role,
+                });
+              }
+            }
+          }
+        }
+
         console.log(`Sent room-state-sync to ${socket.id} for room ${roomId} (${freshRoomState.players.length} players)`);
       } catch (error) {
         console.error('Error syncing room state:', error);
@@ -828,11 +855,22 @@ export function initializeRoomHandlers(io: Server): void {
         }
 
         // Assign roles to players: 1 Swiper, 1 Swipefish, X-2 Matches
-        const roleAssignments = assignRoles(updatedRoomState.players);
+        const newRoleAssignments = assignRoles(updatedRoomState.players);
+        
+        // Store role assignments in memory by playerId (stable across reconnections)
+        const roomRoleMap = new Map<string, PlayerRole>();
+        for (const player of updatedRoomState.players) {
+          const role = newRoleAssignments.get(player.socket_id);
+          if (role) {
+            // Store by playerId, not socketId, so roles persist across reconnections
+            roomRoleMap.set(player.id, role);
+          }
+        }
+        roleAssignments.set(roomId, roomRoleMap);
         
         // Send role assignment to each player individually
         for (const player of updatedRoomState.players) {
-          const role = roleAssignments.get(player.socket_id);
+          const role = newRoleAssignments.get(player.socket_id);
           if (role) {
             const targetSocket = io.sockets.sockets.get(player.socket_id);
             if (targetSocket) {
@@ -853,8 +891,18 @@ export function initializeRoomHandlers(io: Server): void {
           room: formattedRoomState as any,
         };
 
-        // Broadcast to all players in the room
+        // Broadcast to all players in the room AND send directly to each player
+        // This ensures delivery even if socket.io room membership is out of sync
         io.to(roomId).emit('game-started', gameStartedEvent);
+        
+        // Also send directly to each player as a fallback
+        for (const player of updatedRoomState.players) {
+          const targetSocket = io.sockets.sockets.get(player.socket_id);
+          if (targetSocket) {
+            targetSocket.emit('game-started', gameStartedEvent);
+          }
+        }
+        
         logWithTrace('info', 'Broadcasted game-started event', { 
           roomId, 
           playerCount: updatedRoomState.players.length 
