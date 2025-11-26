@@ -693,7 +693,56 @@ export function initializeRoomHandlers(io: Server): void {
           const roomRoleMap = roleAssignments.get(roomId);
           if (roomRoleMap) {
             // Find the player with this socket_id
-            const player = freshRoomState.players.find(p => p.socket_id === socket.id);
+            let player = freshRoomState.players.find(p => p.socket_id === socket.id);
+            
+            // If player not found by socket_id, they may have reconnected
+            // Check if any player in the room has a stale socket_id (not connected)
+            // and try to match them by checking if this socket should have a role
+            if (!player && freshRoomState.players.length > 0) {
+              // Find players with stale socket_ids (their socket is not connected)
+              const playersWithStaleSockets = freshRoomState.players.filter(p => {
+                const oldSocket = io.sockets.sockets.get(p.socket_id);
+                return !oldSocket && roomRoleMap.has(p.id);
+              });
+              
+              // If there's exactly one player with a stale socket and roles, assume this is them
+              // This is a heuristic but should work for most cases
+              if (playersWithStaleSockets.length === 1) {
+                const stalePlayer = playersWithStaleSockets[0];
+                // Update their socket_id in the database
+                try {
+                  const dbPool = ensurePoolInitialized();
+                  await dbPool.query(
+                    'UPDATE players SET socket_id = $1 WHERE id = $2',
+                    [socket.id, stalePlayer.id]
+                  );
+                  // Refresh room state
+                  const updatedState = await getRoomWithPlayers(roomId);
+                  if (updatedState) {
+                    player = updatedState.players.find(p => p.id === stalePlayer.id);
+                    logWithTrace('info', 'Updated stale socket_id during sync', {
+                      roomId,
+                      playerId: stalePlayer.id,
+                      oldSocketId: stalePlayer.socket_id,
+                      newSocketId: socket.id,
+                    });
+                  }
+                } catch (error) {
+                  logWithTrace('error', 'Error updating socket_id during sync', {
+                    roomId,
+                    error: error instanceof Error ? error.message : String(error),
+                  });
+                }
+              } else if (playersWithStaleSockets.length > 1) {
+                // Multiple players with stale sockets - can't determine which one
+                logWithTrace('warn', 'Multiple players with stale sockets, cannot determine which one', {
+                  roomId,
+                  socketId: socket.id,
+                  stalePlayers: playersWithStaleSockets.map(p => ({ id: p.id, socketId: p.socket_id })),
+                });
+              }
+            }
+            
             if (player) {
               const role = roomRoleMap.get(player.id);
               if (role) {
