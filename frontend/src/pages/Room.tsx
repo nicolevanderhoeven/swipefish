@@ -433,63 +433,66 @@ export function Room() {
           </div>
         )}
 
-        {roomState.room.status === 'active' && (
-          <div className="game-status-section">
-            <p className="game-active-message">🎮 Game is in progress!</p>
-            {(() => {
-              console.warn('🎨 RENDERING CHECK: personaData =', personaData);
-              console.warn('🎨 RENDERING CHECK: personaData !== null =', personaData !== null);
-              console.warn('🎨 RENDERING CHECK: personaData !== undefined =', personaData !== undefined);
-              console.warn('🎨 RENDERING CHECK: roomStatus =', roomState.room.status);
-              
-              if (personaData !== null && personaData !== undefined) {
-                console.warn('✅ RENDERING: Showing persona card');
-                return (
-                  <div className="swiper-persona-card" data-testid="swiper-persona-card" style={{ border: '5px solid green' }}>
-                    <p className="swiper-persona-label">Swiper's Persona:</p>
-                    <div className="swiper-persona-content">
-                      <img
-                        src={getPersonaImagePath(
-                          personaData.personaNumber || '',
-                          personaData.personaName || ''
-                        )}
-                        alt={personaData.personaName || ''}
-                        className="swiper-persona-image"
-                        onError={(e) => {
-                          console.error('❌ Persona image failed to load!');
-                          // Hide image if it fails to load
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                        onLoad={() => {
-                          console.warn('✅ Persona image loaded successfully!');
-                        }}
-                      />
-                      <p className="swiper-persona-name">{personaData.personaName || ''}</p>
-                      <p className="swiper-persona-tagline">"{personaData.personaTagline || ''}"</p>
-                    </div>
+        {roomState.room.status === 'active' && (() => {
+          // Compute persona directly in render - Safari might have issues with useMemo
+          const room = roomState.room as any;
+          const personaNumber = room.swiper_persona_number || room.swiperPersonaNumber;
+          const personaName = room.swiper_persona_name || room.swiperPersonaName;
+          const personaTagline = room.swiper_persona_tagline || room.swiperPersonaTagline;
+          const hasPersona = !!(personaNumber && personaName && personaTagline);
+          
+          console.warn('DIRECT RENDER CHECK:', {
+            personaNumber,
+            personaName,
+            personaTagline,
+            hasPersona,
+            allKeys: Object.keys(room),
+          });
+          
+          return (
+            <div className="game-status-section">
+              <p className="game-active-message">🎮 Game is in progress!</p>
+              {hasPersona ? (
+                <div className="swiper-persona-card" data-testid="swiper-persona-card" style={{ border: '5px solid green' }}>
+                  <p className="swiper-persona-label">Swiper's Persona:</p>
+                  <div className="swiper-persona-content">
+                    <img
+                      src={getPersonaImagePath(
+                        String(personaNumber),
+                        String(personaName)
+                      )}
+                      alt={String(personaName)}
+                      className="swiper-persona-image"
+                      onError={(e) => {
+                        console.error('Persona image failed to load!');
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                      onLoad={() => {
+                        console.warn('Persona image loaded!');
+                      }}
+                    />
+                    <p className="swiper-persona-name">{String(personaName)}</p>
+                    <p className="swiper-persona-tagline">"{String(personaTagline)}"</p>
                   </div>
-                );
-              } else {
-                console.warn('❌ RENDERING: Persona data is null/undefined. Showing debug box.');
-                return (
-                  <div style={{ padding: '20px', background: '#ffcccc', margin: '20px 0', border: '5px solid red', fontSize: '18px', fontWeight: 'bold' }}>
-                    ⚠️ DEBUG: Persona data is null/undefined. personaData = {JSON.stringify(personaData)}
-                  </div>
-                );
-              }
-            })()}
-            {playerRole && (
-              <div className="role-display">
-                <p className="role-label">Your Role:</p>
-                <p className={`role-value role-${playerRole}`}>
-                  {playerRole === 'swiper' && '👤 Swiper'}
-                  {playerRole === 'swipefish' && '🐟 Swipefish'}
-                  {playerRole === 'match' && '💘 Match'}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+                </div>
+              ) : (
+                <div style={{ padding: '20px', background: '#ffcccc', margin: '20px 0', border: '5px solid red', fontSize: '18px', fontWeight: 'bold' }}>
+                  DEBUG: No persona. Number={String(personaNumber)} Name={String(personaName)} Tagline={String(personaTagline)}
+                </div>
+              )}
+              {playerRole && (
+                <div className="role-display">
+                  <p className="role-label">Your Role:</p>
+                  <p className={`role-value role-${playerRole}`}>
+                    {playerRole === 'swiper' && '👤 Swiper'}
+                    {playerRole === 'swipefish' && '🐟 Swipefish'}
+                    {playerRole === 'match' && '💘 Match'}
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         
         <div className="room-actions">
           {roomState.room.status === 'waiting' && (
