@@ -318,72 +318,56 @@ export function Room() {
           </div>
         )}
 
-        {roomState.room.status === 'active' && (
-          <div className="game-status-section">
-            <p className="game-active-message">🎮 Game is in progress!</p>
-            {(() => {
-              // Force check all possible field names (in case of naming mismatch)
-              const personaNumber = (roomState.room as any).swiper_persona_number || (roomState.room as any).swiperPersonaNumber;
-              const personaName = (roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName;
-              const personaTagline = (roomState.room as any).swiper_persona_tagline || (roomState.room as any).swiperPersonaTagline;
-              const hasPersona = !!(personaName && personaTagline && personaNumber);
-              
-              console.log('Room component: Rendering - Checking persona fields:', {
-                personaNumber,
-                personaName,
-                personaTagline,
-                allKeys: Object.keys(roomState.room),
-                hasPersona,
-                roomStateKeys: Object.keys(roomState),
-                fullRoom: JSON.stringify(roomState.room, null, 2),
-              });
-              if (!hasPersona) {
-                console.warn('Room component: Persona data missing!', {
-                  room: roomState.room,
-                  fullRoomState: roomState,
-                });
-              }
-              return null;
-            })()}
-            {(() => {
-              // Use flexible field access to handle both snake_case and camelCase
-              const personaNumber = (roomState.room as any).swiper_persona_number || (roomState.room as any).swiperPersonaNumber;
-              const personaName = (roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName;
-              const personaTagline = (roomState.room as any).swiper_persona_tagline || (roomState.room as any).swiperPersonaTagline;
-              const shouldShow = !!(personaName && personaTagline && personaNumber);
-              
-              // Log for debugging - this should show for ALL players
-              console.log('Room component: Persona visibility check:', {
-                playerRole,
-                personaNumber,
-                personaName,
-                personaTagline,
-                shouldShow,
-                roomStatus: roomState.room.status,
-              });
-              
-              return shouldShow;
-            })() && (
-              <div className="swiper-persona-card">
-                <p className="swiper-persona-label">Swiper's Persona:</p>
-                <div className="swiper-persona-content">
-                  <img
-                    src={getPersonaImagePath(
-                      (roomState.room as any).swiper_persona_number || (roomState.room as any).swiperPersonaNumber || '',
-                      (roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName || ''
-                    )}
-                    alt={(roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName || ''}
-                    className="swiper-persona-image"
-                    onError={(e) => {
-                      // Hide image if it fails to load
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                  <p className="swiper-persona-name">{(roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName || ''}</p>
-                  <p className="swiper-persona-tagline">"{(roomState.room as any).swiper_persona_tagline || (roomState.room as any).swiperPersonaTagline || ''}"</p>
+        {roomState.room.status === 'active' && (() => {
+          // Extract persona data using flexible field access
+          const personaNumber = (roomState.room as any).swiper_persona_number || (roomState.room as any).swiperPersonaNumber;
+          const personaName = (roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName;
+          const personaTagline = (roomState.room as any).swiper_persona_tagline || (roomState.room as any).swiperPersonaTagline;
+          const hasPersona = !!(personaName && personaTagline && personaNumber);
+          
+          // Log for debugging - this should show for ALL players
+          console.log('Room component: Rendering - Checking persona fields:', {
+            playerRole,
+            personaNumber,
+            personaName,
+            personaTagline,
+            hasPersona,
+            allKeys: Object.keys(roomState.room),
+            roomStateKeys: Object.keys(roomState),
+            fullRoom: JSON.stringify(roomState.room, null, 2),
+          });
+          
+          if (!hasPersona) {
+            console.warn('Room component: Persona data missing!', {
+              room: roomState.room,
+              fullRoomState: roomState,
+            });
+          }
+          
+          return (
+            <div className="game-status-section">
+              <p className="game-active-message">🎮 Game is in progress!</p>
+              {hasPersona && (
+                <div className="swiper-persona-card">
+                  <p className="swiper-persona-label">Swiper's Persona:</p>
+                  <div className="swiper-persona-content">
+                    <img
+                      src={getPersonaImagePath(
+                        personaNumber || '',
+                        personaName || ''
+                      )}
+                      alt={personaName || ''}
+                      className="swiper-persona-image"
+                      onError={(e) => {
+                        // Hide image if it fails to load
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    <p className="swiper-persona-name">{personaName || ''}</p>
+                    <p className="swiper-persona-tagline">"{personaTagline || ''}"</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             {playerRole && (
               <div className="role-display">
                 <p className="role-label">Your Role:</p>
