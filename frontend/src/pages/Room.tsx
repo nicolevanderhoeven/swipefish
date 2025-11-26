@@ -107,12 +107,15 @@ export function Room() {
     console.log('Room component: Received game-started event', event);
     console.log('Room component: Room object:', event.room);
     console.log('Room component: Room.room object:', event.room.room);
+    console.log('Room component: Full room.room JSON:', JSON.stringify(event.room.room, null, 2));
     console.log('Room component: Persona fields:', {
       personaNumber: event.room.room.swiper_persona_number,
       personaName: event.room.room.swiper_persona_name,
       personaTagline: event.room.room.swiper_persona_tagline,
     });
     console.log('Room component: All room keys:', Object.keys(event.room.room));
+    console.log('Room component: Has persona number?', !!event.room.room.swiper_persona_number);
+    console.log('Room component: Has persona name?', !!event.room.room.swiper_persona_name);
     setRoomState(event.room);
     setIsStartingGame(false);
     setError(null);
@@ -296,12 +299,21 @@ export function Room() {
           <div className="game-status-section">
             <p className="game-active-message">🎮 Game is in progress!</p>
             {(() => {
+              const hasPersona = !!(roomState.room.swiper_persona_name && roomState.room.swiper_persona_tagline && roomState.room.swiper_persona_number);
               console.log('Room component: Rendering - Checking persona fields:', {
                 personaNumber: roomState.room.swiper_persona_number,
                 personaName: roomState.room.swiper_persona_name,
                 personaTagline: roomState.room.swiper_persona_tagline,
                 allKeys: Object.keys(roomState.room),
+                hasPersona,
+                roomStateKeys: Object.keys(roomState),
               });
+              if (!hasPersona) {
+                console.warn('Room component: Persona data missing!', {
+                  room: roomState.room,
+                  fullRoomState: roomState,
+                });
+              }
               return null;
             })()}
             {roomState.room.swiper_persona_name && roomState.room.swiper_persona_tagline && roomState.room.swiper_persona_number && (
