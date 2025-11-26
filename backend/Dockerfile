@@ -13,7 +13,8 @@ RUN npm ci
 # Copy source code
 COPY src/ ./src/
 # Copy personas CSV file (needed at runtime)
-COPY img/ ./img/
+# Note: Build context must be from project root, not backend directory
+COPY img/personas/ ./img/personas/
 
 # Build TypeScript
 RUN npm run build

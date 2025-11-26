@@ -26,8 +26,8 @@ kubectl apply -f k8s/cert-manager-issuer-updated.yaml
 # Step 3: Build and push backend image
 echo ""
 echo "🏗️  Step 3: Building backend Docker image..."
-cd backend
-docker build --platform=linux/amd64 -t ${DOCKER_HUB_USERNAME}/swipefish-backend:latest .
+# Build from project root so we can access img/ directory
+docker build --platform=linux/amd64 -f backend/Dockerfile -t ${DOCKER_HUB_USERNAME}/swipefish-backend:latest .
 echo "📤 Pushing backend image to Docker Hub..."
 docker push ${DOCKER_HUB_USERNAME}/swipefish-backend:latest
 cd ..
