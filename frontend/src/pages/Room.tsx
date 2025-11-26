@@ -336,11 +336,38 @@ export function Room() {
   const canStartGame = roomState?.room.status === 'waiting' && roomState.players.length >= MIN_PLAYERS;
   const playerCount = roomState?.players.length || 0;
 
+  // Force render debug info immediately
+  useEffect(() => {
+    const debugDiv = document.getElementById('safari-debug');
+    if (debugDiv) {
+      const hasPersona = personaData !== null && personaData !== undefined;
+      debugDiv.textContent = `SAFARI DEBUG: Persona=${hasPersona ? 'YES' : 'NO'} | Status=${roomState?.room.status || 'unknown'}`;
+      debugDiv.style.display = 'block';
+    }
+  }, [personaData, roomState]);
+
   return (
     <div className="room-page">
       <Logo onLeaveRoom={handleLeaveRoom} />
-      <div id="safari-debug" style={{ position: 'fixed', top: 0, left: 0, background: 'yellow', padding: '5px', zIndex: 9999, fontSize: '12px' }}></div>
-      <div className="room-content">
+      <div 
+        id="safari-debug" 
+        style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0,
+          background: 'yellow', 
+          padding: '10px', 
+          zIndex: 99999, 
+          fontSize: '14px',
+          fontWeight: 'bold',
+          border: '3px solid red',
+          display: 'block'
+        }}
+      >
+        Loading debug info...
+      </div>
+      <div className="room-content" style={{ marginTop: '50px' }}>
         <h1 className="room-title">Room</h1>
         
         <div className="passphrase-section">
@@ -377,7 +404,7 @@ export function Room() {
           <div className="game-status-section">
             <p className="game-active-message">🎮 Game is in progress!</p>
             {personaData !== null && personaData !== undefined ? (
-              <div className="swiper-persona-card" data-testid="swiper-persona-card">
+              <div className="swiper-persona-card" data-testid="swiper-persona-card" style={{ border: '5px solid green' }}>
                 <p className="swiper-persona-label">Swiper's Persona:</p>
                 <div className="swiper-persona-content">
                   <img
@@ -388,12 +415,12 @@ export function Room() {
                     alt={personaData.personaName || ''}
                     className="swiper-persona-image"
                     onError={(e) => {
-                      console.error('Persona image failed to load:', e);
+                      alert('Persona image failed to load!');
                       // Hide image if it fails to load
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                     onLoad={() => {
-                      console.log('Persona image loaded successfully');
+                      alert('Persona image loaded!');
                     }}
                   />
                   <p className="swiper-persona-name">{personaData.personaName || ''}</p>
@@ -401,8 +428,8 @@ export function Room() {
                 </div>
               </div>
             ) : (
-              <div style={{ padding: '10px', background: '#ffcccc', margin: '10px 0' }}>
-                DEBUG: Persona data is null. Check console for details.
+              <div style={{ padding: '20px', background: '#ffcccc', margin: '20px 0', border: '5px solid red', fontSize: '18px', fontWeight: 'bold' }}>
+                ⚠️ DEBUG: Persona data is null/undefined. personaData = {JSON.stringify(personaData)}
               </div>
             )}
             {playerRole && (
