@@ -293,7 +293,8 @@ export function Room() {
                        personaNumber !== '' && personaName !== '' && personaTagline !== '';
     
     // Log for debugging - this should show for ALL players
-    console.log('Room component: Persona computation:', {
+    // Use console.warn for Safari visibility (Safari sometimes hides console.log)
+    console.warn('Room component: Persona computation:', {
       playerRole,
       personaNumber,
       personaName,
@@ -303,6 +304,14 @@ export function Room() {
       allKeys: Object.keys(roomState.room),
       roomStringified: JSON.stringify(roomState.room),
     });
+    
+    // Also log directly to DOM for Safari debugging
+    if (typeof window !== 'undefined' && window.document) {
+      const debugDiv = document.getElementById('safari-debug');
+      if (debugDiv) {
+        debugDiv.textContent = `Persona: ${hasPersona ? 'FOUND' : 'MISSING'} - ${personaName || 'NO NAME'}`;
+      }
+    }
     
     if (hasPersona) {
       return {
@@ -330,6 +339,7 @@ export function Room() {
   return (
     <div className="room-page">
       <Logo onLeaveRoom={handleLeaveRoom} />
+      <div id="safari-debug" style={{ position: 'fixed', top: 0, left: 0, background: 'yellow', padding: '5px', zIndex: 9999, fontSize: '12px' }}></div>
       <div className="room-content">
         <h1 className="room-title">Room</h1>
         
@@ -366,8 +376,8 @@ export function Room() {
         {roomState.room.status === 'active' && (
           <div className="game-status-section">
             <p className="game-active-message">🎮 Game is in progress!</p>
-            {personaData !== null ? (
-              <div className="swiper-persona-card">
+            {personaData !== null && personaData !== undefined ? (
+              <div className="swiper-persona-card" data-testid="swiper-persona-card">
                 <p className="swiper-persona-label">Swiper's Persona:</p>
                 <div className="swiper-persona-content">
                   <img
@@ -378,15 +388,23 @@ export function Room() {
                     alt={personaData.personaName || ''}
                     className="swiper-persona-image"
                     onError={(e) => {
+                      console.error('Persona image failed to load:', e);
                       // Hide image if it fails to load
                       (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                    onLoad={() => {
+                      console.log('Persona image loaded successfully');
                     }}
                   />
                   <p className="swiper-persona-name">{personaData.personaName || ''}</p>
                   <p className="swiper-persona-tagline">"{personaData.personaTagline || ''}"</p>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <div style={{ padding: '10px', background: '#ffcccc', margin: '10px 0' }}>
+                DEBUG: Persona data is null. Check console for details.
+              </div>
+            )}
             {playerRole && (
               <div className="role-display">
                 <p className="role-label">Your Role:</p>
