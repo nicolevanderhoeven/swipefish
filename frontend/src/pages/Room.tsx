@@ -270,6 +270,33 @@ export function Room() {
     }
   };
 
+  // Extract persona data for rendering (computed outside JSX for Safari compatibility)
+  const personaData = roomState?.room.status === 'active' ? (() => {
+    const room = roomState.room as any;
+    const personaNumber = room.swiper_persona_number || room.swiperPersonaNumber;
+    const personaName = room.swiper_persona_name || room.swiperPersonaName;
+    const personaTagline = room.swiper_persona_tagline || room.swiperPersonaTagline;
+    const hasPersona = !!(personaName && personaTagline && personaNumber);
+    
+    // Log for debugging - this should show for ALL players
+    if (hasPersona) {
+      console.log('Room component: Rendering - Persona data found:', {
+        playerRole,
+        personaNumber,
+        personaName,
+        personaTagline,
+        allKeys: Object.keys(roomState.room),
+      });
+    } else {
+      console.warn('Room component: Persona data missing!', {
+        room: roomState.room,
+        allKeys: Object.keys(roomState.room),
+      });
+    }
+    
+    return hasPersona ? { personaNumber, personaName, personaTagline } : null;
+  })() : null;
+
   const handleStartGame = () => {
     if (!socket || !roomState || isStartingGame) return;
     
@@ -318,69 +345,42 @@ export function Room() {
           </div>
         )}
 
-        {roomState.room.status === 'active' && (() => {
-          // Extract persona data using flexible field access
-          const personaNumber = (roomState.room as any).swiper_persona_number || (roomState.room as any).swiperPersonaNumber;
-          const personaName = (roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName;
-          const personaTagline = (roomState.room as any).swiper_persona_tagline || (roomState.room as any).swiperPersonaTagline;
-          const hasPersona = !!(personaName && personaTagline && personaNumber);
-          
-          // Log for debugging - this should show for ALL players
-          console.log('Room component: Rendering - Checking persona fields:', {
-            playerRole,
-            personaNumber,
-            personaName,
-            personaTagline,
-            hasPersona,
-            allKeys: Object.keys(roomState.room),
-            roomStateKeys: Object.keys(roomState),
-            fullRoom: JSON.stringify(roomState.room, null, 2),
-          });
-          
-          if (!hasPersona) {
-            console.warn('Room component: Persona data missing!', {
-              room: roomState.room,
-              fullRoomState: roomState,
-            });
-          }
-          
-          return (
-            <div className="game-status-section">
-              <p className="game-active-message">🎮 Game is in progress!</p>
-              {hasPersona && (
-                <div className="swiper-persona-card">
-                  <p className="swiper-persona-label">Swiper's Persona:</p>
-                  <div className="swiper-persona-content">
-                    <img
-                      src={getPersonaImagePath(
-                        personaNumber || '',
-                        personaName || ''
-                      )}
-                      alt={personaName || ''}
-                      className="swiper-persona-image"
-                      onError={(e) => {
-                        // Hide image if it fails to load
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                    <p className="swiper-persona-name">{personaName || ''}</p>
-                    <p className="swiper-persona-tagline">"{personaTagline || ''}"</p>
-                  </div>
+        {roomState.room.status === 'active' && (
+          <div className="game-status-section">
+            <p className="game-active-message">🎮 Game is in progress!</p>
+            {personaData && (
+              <div className="swiper-persona-card">
+                <p className="swiper-persona-label">Swiper's Persona:</p>
+                <div className="swiper-persona-content">
+                  <img
+                    src={getPersonaImagePath(
+                      personaData.personaNumber || '',
+                      personaData.personaName || ''
+                    )}
+                    alt={personaData.personaName || ''}
+                    className="swiper-persona-image"
+                    onError={(e) => {
+                      // Hide image if it fails to load
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  <p className="swiper-persona-name">{personaData.personaName || ''}</p>
+                  <p className="swiper-persona-tagline">"{personaData.personaTagline || ''}"</p>
                 </div>
-              )}
-              {playerRole && (
-                <div className="role-display">
-                  <p className="role-label">Your Role:</p>
-                  <p className={`role-value role-${playerRole}`}>
-                    {playerRole === 'swiper' && '👤 Swiper'}
-                    {playerRole === 'swipefish' && '🐟 Swipefish'}
-                    {playerRole === 'match' && '💘 Match'}
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })()}
+              </div>
+            )}
+            {playerRole && (
+              <div className="role-display">
+                <p className="role-label">Your Role:</p>
+                <p className={`role-value role-${playerRole}`}>
+                  {playerRole === 'swiper' && '👤 Swiper'}
+                  {playerRole === 'swipefish' && '🐟 Swipefish'}
+                  {playerRole === 'match' && '💘 Match'}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
         
         <div className="room-actions">
           {roomState.room.status === 'waiting' && (
