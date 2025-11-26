@@ -705,8 +705,26 @@ export function initializeRoomHandlers(io: Server): void {
                   socketId: socket.id,
                   role,
                 });
+              } else {
+                logWithTrace('warn', 'No role found for player during sync', {
+                  roomId,
+                  playerId: player.id,
+                  socketId: socket.id,
+                  availableRoles: Array.from(roomRoleMap.keys()),
+                });
               }
+            } else {
+              logWithTrace('warn', 'Player not found in room during sync', {
+                roomId,
+                socketId: socket.id,
+                playersInRoom: freshRoomState.players.map(p => ({ id: p.id, socketId: p.socket_id })),
+              });
             }
+          } else {
+            logWithTrace('warn', 'No role assignments found for room during sync', {
+              roomId,
+              socketId: socket.id,
+            });
           }
         }
 
@@ -868,9 +886,17 @@ export function initializeRoomHandlers(io: Server): void {
         }
         roleAssignments.set(roomId, roomRoleMap);
         
+        logWithTrace('info', 'Assigned roles to players', {
+          roomId,
+          roleCount: roomRoleMap.size,
+          playerCount: updatedRoomState.players.length,
+          roles: Array.from(roomRoleMap.entries()).map(([playerId, role]) => ({ playerId, role })),
+        });
+        
         // Send role assignment to each player individually
+        // Use the stored roomRoleMap which is keyed by player.id
         for (const player of updatedRoomState.players) {
-          const role = newRoleAssignments.get(player.socket_id);
+          const role = roomRoleMap.get(player.id);
           if (role) {
             const targetSocket = io.sockets.sockets.get(player.socket_id);
             if (targetSocket) {
@@ -882,7 +908,21 @@ export function initializeRoomHandlers(io: Server): void {
                 socketId: player.socket_id,
                 role,
               });
+            } else {
+              // Socket not found - will be sent via game-started fallback and sync
+              logWithTrace('warn', 'Socket not found for initial role assignment, will retry', {
+                roomId,
+                playerId: player.id,
+                socketId: player.socket_id,
+                role,
+              });
             }
+          } else {
+            logWithTrace('warn', 'No role assigned for player', {
+              roomId,
+              playerId: player.id,
+              socketId: player.socket_id,
+            });
           }
         }
 
@@ -895,11 +935,32 @@ export function initializeRoomHandlers(io: Server): void {
         // This ensures delivery even if socket.io room membership is out of sync
         io.to(roomId).emit('game-started', gameStartedEvent);
         
-        // Also send directly to each player as a fallback
+        // Also send directly to each player as a fallback, along with their role
         for (const player of updatedRoomState.players) {
           const targetSocket = io.sockets.sockets.get(player.socket_id);
           if (targetSocket) {
+            // Send game-started event
             targetSocket.emit('game-started', gameStartedEvent);
+            
+            // Also send role assignment if it exists (in case they missed the initial role-assigned event)
+            const role = roomRoleMap.get(player.id);
+            if (role) {
+              const roleAssignmentEvent: RoleAssignmentEvent = { role };
+              targetSocket.emit('role-assigned', roleAssignmentEvent);
+              logWithTrace('info', 'Sent role assignment with game-started fallback', {
+                roomId,
+                playerId: player.id,
+                socketId: player.socket_id,
+                role,
+              });
+            }
+          } else {
+            // Log if socket not found - this player will get role via sync
+            logWithTrace('warn', 'Socket not found when sending game-started, will sync later', {
+              roomId,
+              playerId: player.id,
+              socketId: player.socket_id,
+            });
           }
         }
         
