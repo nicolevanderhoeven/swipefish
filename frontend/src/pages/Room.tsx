@@ -299,14 +299,20 @@ export function Room() {
           <div className="game-status-section">
             <p className="game-active-message">🎮 Game is in progress!</p>
             {(() => {
-              const hasPersona = !!(roomState.room.swiper_persona_name && roomState.room.swiper_persona_tagline && roomState.room.swiper_persona_number);
+              // Force check all possible field names (in case of naming mismatch)
+              const personaNumber = (roomState.room as any).swiper_persona_number || (roomState.room as any).swiperPersonaNumber;
+              const personaName = (roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName;
+              const personaTagline = (roomState.room as any).swiper_persona_tagline || (roomState.room as any).swiperPersonaTagline;
+              const hasPersona = !!(personaName && personaTagline && personaNumber);
+              
               console.log('Room component: Rendering - Checking persona fields:', {
-                personaNumber: roomState.room.swiper_persona_number,
-                personaName: roomState.room.swiper_persona_name,
-                personaTagline: roomState.room.swiper_persona_tagline,
+                personaNumber,
+                personaName,
+                personaTagline,
                 allKeys: Object.keys(roomState.room),
                 hasPersona,
                 roomStateKeys: Object.keys(roomState),
+                fullRoom: JSON.stringify(roomState.room, null, 2),
               });
               if (!hasPersona) {
                 console.warn('Room component: Persona data missing!', {
@@ -316,21 +322,30 @@ export function Room() {
               }
               return null;
             })()}
-            {roomState.room.swiper_persona_name && roomState.room.swiper_persona_tagline && roomState.room.swiper_persona_number && (
+            {(() => {
+              // Use flexible field access to handle both snake_case and camelCase
+              const personaNumber = (roomState.room as any).swiper_persona_number || (roomState.room as any).swiperPersonaNumber;
+              const personaName = (roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName;
+              const personaTagline = (roomState.room as any).swiper_persona_tagline || (roomState.room as any).swiperPersonaTagline;
+              return personaName && personaTagline && personaNumber;
+            })() && (
               <div className="swiper-persona-card">
                 <p className="swiper-persona-label">Swiper's Persona:</p>
                 <div className="swiper-persona-content">
                   <img
-                    src={getPersonaImagePath(roomState.room.swiper_persona_number, roomState.room.swiper_persona_name)}
-                    alt={roomState.room.swiper_persona_name}
+                    src={getPersonaImagePath(
+                      (roomState.room as any).swiper_persona_number || (roomState.room as any).swiperPersonaNumber || '',
+                      (roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName || ''
+                    )}
+                    alt={(roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName || ''}
                     className="swiper-persona-image"
                     onError={(e) => {
                       // Hide image if it fails to load
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
-                  <p className="swiper-persona-name">{roomState.room.swiper_persona_name}</p>
-                  <p className="swiper-persona-tagline">"{roomState.room.swiper_persona_tagline}"</p>
+                  <p className="swiper-persona-name">{(roomState.room as any).swiper_persona_name || (roomState.room as any).swiperPersonaName || ''}</p>
+                  <p className="swiper-persona-tagline">"{(roomState.room as any).swiper_persona_tagline || (roomState.room as any).swiperPersonaTagline || ''}"</p>
                 </div>
               </div>
             )}
