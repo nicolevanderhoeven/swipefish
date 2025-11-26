@@ -56,6 +56,24 @@ export function Room() {
     if (response.success && response.room) {
       const syncedRoom = response.room; // Capture in local variable for type narrowing
       console.log('Room component: Received room-state-sync', syncedRoom);
+      
+      // Explicitly check for persona fields and log them prominently
+      const room = syncedRoom.room;
+      const personaNumber = (room as any).swiper_persona_number || (room as any).swiperPersonaNumber;
+      const personaName = (room as any).swiper_persona_name || (room as any).swiperPersonaName;
+      const personaTagline = (room as any).swiper_persona_tagline || (room as any).swiperPersonaTagline;
+      
+      console.warn('🔍 SAFARI PERSONA CHECK:', {
+        hasPersonaNumber: !!personaNumber,
+        hasPersonaName: !!personaName,
+        hasPersonaTagline: !!personaTagline,
+        personaNumber: personaNumber,
+        personaName: personaName,
+        personaTagline: personaTagline,
+        allRoomKeys: Object.keys(room),
+        roomStatus: room.status,
+      });
+      
       console.log('Room component: Sync - Room.room object:', syncedRoom.room);
       console.log('Room component: Sync - Full room object JSON:', JSON.stringify(syncedRoom.room, null, 2));
       console.log('Room component: Sync - Persona fields:', {
@@ -294,7 +312,7 @@ export function Room() {
     
     // Log for debugging - this should show for ALL players
     // Use console.warn for Safari visibility (Safari sometimes hides console.log)
-    console.warn('Room component: Persona computation:', {
+    console.warn('🎯 PERSONA COMPUTATION RESULT:', {
       playerRole,
       personaNumber,
       personaName,
@@ -302,14 +320,15 @@ export function Room() {
       hasPersona,
       roomStatus: roomState.room.status,
       allKeys: Object.keys(roomState.room),
-      roomStringified: JSON.stringify(roomState.room),
+      willReturn: hasPersona ? 'PERSONA OBJECT' : 'NULL',
     });
     
     // Also log directly to DOM for Safari debugging
     if (typeof window !== 'undefined' && window.document) {
       const debugDiv = document.getElementById('safari-debug');
       if (debugDiv) {
-        debugDiv.textContent = `Persona: ${hasPersona ? 'FOUND' : 'MISSING'} - ${personaName || 'NO NAME'}`;
+        debugDiv.textContent = `Persona: ${hasPersona ? 'FOUND' : 'MISSING'} - ${personaName || 'NO NAME'} - Status: ${roomState.room.status}`;
+        debugDiv.style.background = hasPersona ? 'lime' : 'red';
       }
     }
     
