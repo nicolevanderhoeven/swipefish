@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
@@ -271,7 +271,11 @@ export function Room() {
   };
 
   // Extract persona data for rendering (computed outside JSX for Safari compatibility)
-  const personaData = roomState?.room.status === 'active' ? (() => {
+  const personaData = useMemo(() => {
+    if (!roomState || roomState.room.status !== 'active') {
+      return null;
+    }
+    
     const room = roomState.room as any;
     const personaNumber = room.swiper_persona_number || room.swiperPersonaNumber;
     const personaName = room.swiper_persona_name || room.swiperPersonaName;
@@ -295,7 +299,7 @@ export function Room() {
     }
     
     return hasPersona ? { personaNumber, personaName, personaTagline } : null;
-  })() : null;
+  }, [roomState, playerRole]);
 
   const handleStartGame = () => {
     if (!socket || !roomState || isStartingGame) return;
