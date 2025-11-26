@@ -896,6 +896,15 @@ export function initializeRoomHandlers(io: Server): void {
           return;
         }
 
+        // Debug: Log persona data to verify it's being retrieved
+        logWithTrace('info', 'Room state after persona update', {
+          roomId,
+          personaNumber: updatedRoomState.room.swiper_persona_number,
+          personaName: updatedRoomState.room.swiper_persona_name,
+          personaTagline: updatedRoomState.room.swiper_persona_tagline,
+          allRoomFields: Object.keys(updatedRoomState.room),
+        });
+
         // Update in-memory cache
         activeRooms.set(roomId, updatedRoomState);
 
@@ -914,6 +923,14 @@ export function initializeRoomHandlers(io: Server): void {
               : (p.joined_at as any),
           })),
         };
+
+        // Debug: Log formatted room state to verify persona data is included
+        logWithTrace('info', 'Formatted room state for game-started event', {
+          roomId,
+          personaNumber: formattedRoomState.room.swiper_persona_number,
+          personaName: formattedRoomState.room.swiper_persona_name,
+          personaTagline: formattedRoomState.room.swiper_persona_tagline,
+        });
 
         // Ensure all players' sockets are in the room before broadcasting
         const socketsInRoom = await io.in(roomId).fetchSockets();

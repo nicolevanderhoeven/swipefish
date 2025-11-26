@@ -109,17 +109,31 @@ export async function createTables(): Promise<void> {
   // Migration: Copy data from old swiper_role_* columns to new swiper_persona_* columns if they exist
   // This handles the transition from "role" to "persona" naming
   try {
-    await dbPool.query(`
-      UPDATE rooms 
-      SET swiper_persona_number = swiper_role_number,
-          swiper_persona_name = swiper_role_name,
-          swiper_persona_tagline = swiper_role_tagline
-      WHERE (swiper_persona_number IS NULL OR swiper_persona_name IS NULL OR swiper_persona_tagline IS NULL)
-        AND (swiper_role_number IS NOT NULL OR swiper_role_name IS NOT NULL OR swiper_role_tagline IS NOT NULL)
+    // Check if old columns exist by trying to select from them
+    const checkOldColumns = await dbPool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'rooms' 
+        AND column_name IN ('swiper_role_number', 'swiper_role_name', 'swiper_role_tagline')
     `);
+    
+    if (checkOldColumns.rows.length > 0) {
+      // Old columns exist, migrate data
+      const migrationResult = await dbPool.query(`
+        UPDATE rooms 
+        SET swiper_persona_number = swiper_role_number,
+            swiper_persona_name = swiper_role_name,
+            swiper_persona_tagline = swiper_role_tagline
+        WHERE (swiper_persona_number IS NULL OR swiper_persona_name IS NULL OR swiper_persona_tagline IS NULL)
+          AND (swiper_role_number IS NOT NULL OR swiper_role_name IS NOT NULL OR swiper_role_tagline IS NOT NULL)
+      `);
+      console.log(`Migration: Migrated ${migrationResult.rowCount} rooms from swiper_role_* to swiper_persona_*`);
+    } else {
+      console.log('Migration: Old swiper_role_* columns not found, skipping migration');
+    }
   } catch (error) {
     // Ignore errors if old columns don't exist (fresh database)
-    console.log('Migration: Old swiper_role_* columns not found, skipping migration');
+    console.log('Migration: Error checking for old columns, skipping migration:', error);
   }
 }
 
@@ -219,8 +233,17 @@ export async function removePlayer(socketId: string): Promise<void> {
 export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; players: Player[] } | null> {
   const dbPool = ensurePoolInitialized();
 
+  // Explicitly select all columns including persona fields to ensure they're included
   const roomResult = await dbPool.query<Room>(
-    'SELECT * FROM rooms WHERE id = $1',
+    `SELECT 
+      id, 
+      passphrase, 
+      created_at, 
+      status, 
+      swiper_persona_number, 
+      swiper_persona_name, 
+      swiper_persona_tagline 
+    FROM rooms WHERE id = $1`,
     [roomId]
   );
 
