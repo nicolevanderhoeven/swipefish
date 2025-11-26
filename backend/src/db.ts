@@ -234,7 +234,8 @@ export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; 
   const dbPool = ensurePoolInitialized();
 
   // Explicitly select all columns including persona fields to ensure they're included
-  const roomResult = await dbPool.query<Room>(
+  // Don't use Room type here - let PostgreSQL return the raw data
+  const roomResult = await dbPool.query(
     `SELECT 
       id, 
       passphrase, 
@@ -251,19 +252,29 @@ export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; 
 
   const players = await getPlayersInRoom(roomId);
 
-  const room = roomResult.rows[0];
+  const rawRoom = roomResult.rows[0];
   
   // Debug: Log what we're getting from the database
-  console.log('DEBUG: getRoomWithPlayers - Room from DB:', {
-    id: room.id,
-    status: room.status,
-    personaNumber: room.swiper_persona_number,
-    personaName: room.swiper_persona_name,
-    personaTagline: room.swiper_persona_tagline,
-    allKeys: Object.keys(room),
+  console.log('DEBUG: getRoomWithPlayers - Raw room from DB:', JSON.stringify(rawRoom, null, 2));
+  console.log('DEBUG: getRoomWithPlayers - Persona fields:', {
+    personaNumber: rawRoom.swiper_persona_number,
+    personaName: rawRoom.swiper_persona_name,
+    personaTagline: rawRoom.swiper_persona_tagline,
+    allKeys: Object.keys(rawRoom),
   });
-  console.log('DEBUG: getRoomWithPlayers - Full room object:', JSON.stringify(room, null, 2));
-  console.log('DEBUG: getRoomWithPlayers - Raw query result row:', JSON.stringify(roomResult.rows[0], null, 2));
+  
+  // Map to Room type explicitly
+  const room: Room = {
+    id: rawRoom.id,
+    passphrase: rawRoom.passphrase,
+    created_at: rawRoom.created_at,
+    status: rawRoom.status,
+    swiper_persona_number: rawRoom.swiper_persona_number,
+    swiper_persona_name: rawRoom.swiper_persona_name,
+    swiper_persona_tagline: rawRoom.swiper_persona_tagline,
+  };
+  
+  console.log('DEBUG: getRoomWithPlayers - Mapped room:', JSON.stringify(room, null, 2));
 
   return {
     room,
