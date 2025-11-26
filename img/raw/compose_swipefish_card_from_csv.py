@@ -169,7 +169,7 @@ def compose_card(
     # ---------- Title ----------
 
     title_text = role_title.upper()
-    title_y = 500  # Position below the icons in template (decreased by 50px from 550)
+    title_y = 400  # Position below the icons in template (reduced top padding)
     
     # Calculate maximum width with horizontal padding
     max_text_width = W - (HORIZONTAL_PADDING * 2)
@@ -219,7 +219,7 @@ def compose_card(
     # Note: textbbox includes extra space, so we use the baseline position instead
     # The bbox[3] (bottom) includes descenders and extra space, so we'll use a smaller value
     # Try using just the text height without the extra padding
-    gap_between_title_and_image = -75  # Doubled the gap (less overlap) to increase spacing
+    gap_between_title_and_image = 30  # 30px spacing between role title and image
     # Use title_y + actual_text_height (th) but subtract extra space
     # textbbox often includes ~20-30% extra space, so we'll compensate
     illus_top = title_y + int(th * 0.85) + gap_between_title_and_image
@@ -271,12 +271,12 @@ def compose_card(
         line_heights.append(lh)
     total_height = sum(line_heights) + (len(lines) - 1) * 12
 
-    # Use the same gap as between role text and image, plus additional top padding
-    gap_between_image_and_tagline = gap_between_title_and_image + 50  # Same as title-to-image gap (-75px) + 50px top padding = -25px
+    # Gap between image and tagline - reduced for tighter spacing
+    gap_between_image_and_tagline = gap_between_title_and_image - 200  # 30px - 200px = -170px for tighter spacing
     
     # Calculate bottom padding - reduced to give more space for tagline
-    # Top padding is where title_y starts (500px)
-    bottom_padding = title_y - 200  # Reduced by 200px to give more space (300px from bottom)
+    # Top padding is where title_y starts (400px)
+    bottom_padding = title_y - 400  # Reduced by 400px to give more space (0px from bottom, essentially at edge)
     
     # Position tagline with the gap (includes additional top padding)
     # The gap is applied similarly - start tagline at image bottom + gap
