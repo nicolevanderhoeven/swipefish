@@ -57,7 +57,10 @@ export async function createTables(): Promise<void> {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       passphrase VARCHAR(255) UNIQUE NOT NULL,
       created_at TIMESTAMP DEFAULT NOW(),
-      status VARCHAR(50) DEFAULT 'waiting'
+      status VARCHAR(50) DEFAULT 'waiting',
+      swiper_role_number VARCHAR(10),
+      swiper_role_name VARCHAR(255),
+      swiper_role_tagline TEXT
     )
   `);
 
@@ -85,6 +88,22 @@ export async function createTables(): Promise<void> {
 
   await dbPool.query(`
     CREATE INDEX IF NOT EXISTS idx_rooms_passphrase ON rooms(passphrase)
+  `);
+
+  // Add swiper role columns if they don't exist (for existing databases)
+  await dbPool.query(`
+    ALTER TABLE rooms 
+    ADD COLUMN IF NOT EXISTS swiper_role_number VARCHAR(10)
+  `);
+
+  await dbPool.query(`
+    ALTER TABLE rooms 
+    ADD COLUMN IF NOT EXISTS swiper_role_name VARCHAR(255)
+  `);
+
+  await dbPool.query(`
+    ALTER TABLE rooms 
+    ADD COLUMN IF NOT EXISTS swiper_role_tagline TEXT
   `);
 }
 
@@ -223,6 +242,15 @@ export async function clearPlayerRolesInRoom(roomId: string): Promise<void> {
   await dbPool.query(
     'UPDATE players SET role = NULL WHERE room_id = $1',
     [roomId]
+  );
+}
+
+export async function updateSwiperRole(roomId: string, roleNumber: string, roleName: string, roleTagline: string): Promise<void> {
+  const dbPool = ensurePoolInitialized();
+
+  await dbPool.query(
+    'UPDATE rooms SET swiper_role_number = $1, swiper_role_name = $2, swiper_role_tagline = $3 WHERE id = $4',
+    [roleNumber, roleName, roleTagline, roomId]
   );
 }
 
