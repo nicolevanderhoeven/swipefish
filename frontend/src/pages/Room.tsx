@@ -56,6 +56,13 @@ export function Room() {
     if (response.success && response.room) {
       const syncedRoom = response.room; // Capture in local variable for type narrowing
       console.log('Room component: Received room-state-sync', syncedRoom);
+      console.log('Room component: Sync - Room.room object:', syncedRoom.room);
+      console.log('Room component: Sync - Persona fields:', {
+        personaNumber: syncedRoom.room.swiper_persona_number,
+        personaName: syncedRoom.room.swiper_persona_name,
+        personaTagline: syncedRoom.room.swiper_persona_tagline,
+      });
+      console.log('Room component: Sync - All room keys:', Object.keys(syncedRoom.room));
       setRoomState((prevState) => {
         // Check if state changed: player count, player IDs, or room status
         const prevPlayerIds = prevState?.players.map(p => p.id).sort().join(',') || '';
@@ -98,11 +105,13 @@ export function Room() {
   const handleGameStarted = useCallback((event: GameStartedEvent) => {
     console.log('Room component: Received game-started event', event);
     console.log('Room component: Room object:', event.room);
+    console.log('Room component: Room.room object:', event.room.room);
     console.log('Room component: Persona fields:', {
       personaNumber: event.room.room.swiper_persona_number,
       personaName: event.room.room.swiper_persona_name,
       personaTagline: event.room.room.swiper_persona_tagline,
     });
+    console.log('Room component: All room keys:', Object.keys(event.room.room));
     setRoomState(event.room);
     setIsStartingGame(false);
     setError(null);
@@ -285,6 +294,15 @@ export function Room() {
         {roomState.room.status === 'active' && (
           <div className="game-status-section">
             <p className="game-active-message">🎮 Game is in progress!</p>
+            {(() => {
+              console.log('Room component: Rendering - Checking persona fields:', {
+                personaNumber: roomState.room.swiper_persona_number,
+                personaName: roomState.room.swiper_persona_name,
+                personaTagline: roomState.room.swiper_persona_tagline,
+                allKeys: Object.keys(roomState.room),
+              });
+              return null;
+            })()}
             {roomState.room.swiper_persona_name && roomState.room.swiper_persona_tagline && roomState.room.swiper_persona_number && (
               <div className="swiper-persona-card">
                 <p className="swiper-persona-label">Swiper's Persona:</p>

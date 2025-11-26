@@ -681,6 +681,14 @@ export function initializeRoomHandlers(io: Server): void {
           })),
         };
 
+        // Debug: Log what we're sending in room-state-sync
+        console.log('DEBUG: room-state-sync - Persona fields:', {
+          personaNumber: formattedRoomState.room.swiper_persona_number,
+          personaName: formattedRoomState.room.swiper_persona_name,
+          personaTagline: formattedRoomState.room.swiper_persona_tagline,
+          allRoomKeys: Object.keys(formattedRoomState.room),
+        });
+
         // Send current room state to requesting socket
         socket.emit('room-state-sync', {
           success: true,
