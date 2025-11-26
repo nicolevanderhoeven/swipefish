@@ -251,8 +251,20 @@ export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; 
 
   const players = await getPlayersInRoom(roomId);
 
+  const room = roomResult.rows[0];
+  
+  // Debug: Log what we're getting from the database
+  console.log('DEBUG: getRoomWithPlayers - Room from DB:', {
+    id: room.id,
+    status: room.status,
+    personaNumber: room.swiper_persona_number,
+    personaName: room.swiper_persona_name,
+    personaTagline: room.swiper_persona_tagline,
+    allKeys: Object.keys(room),
+  });
+
   return {
-    room: roomResult.rows[0],
+    room,
     players,
   };
 }
