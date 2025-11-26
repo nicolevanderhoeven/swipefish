@@ -11,6 +11,7 @@ export interface Player {
   name: string | null;
   socket_id: string;
   joined_at: string;
+  role?: PlayerRole | null;
 }
 
 export interface RoomState {

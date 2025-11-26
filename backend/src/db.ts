@@ -68,8 +68,15 @@ export async function createTables(): Promise<void> {
       name VARCHAR(255),
       socket_id VARCHAR(255) NOT NULL,
       joined_at TIMESTAMP DEFAULT NOW(),
+      role VARCHAR(50),
       UNIQUE(room_id, socket_id)
     )
+  `);
+  
+  // Add role column if it doesn't exist (for existing databases)
+  await dbPool.query(`
+    ALTER TABLE players 
+    ADD COLUMN IF NOT EXISTS role VARCHAR(50)
   `);
 
   await dbPool.query(`
@@ -198,6 +205,24 @@ export async function updateRoomStatus(roomId: string, status: 'waiting' | 'acti
   await dbPool.query(
     'UPDATE rooms SET status = $1 WHERE id = $2',
     [status, roomId]
+  );
+}
+
+export async function updatePlayerRole(playerId: string, role: 'swiper' | 'swipefish' | 'match' | null): Promise<void> {
+  const dbPool = ensurePoolInitialized();
+
+  await dbPool.query(
+    'UPDATE players SET role = $1 WHERE id = $2',
+    [role, playerId]
+  );
+}
+
+export async function clearPlayerRolesInRoom(roomId: string): Promise<void> {
+  const dbPool = ensurePoolInitialized();
+
+  await dbPool.query(
+    'UPDATE players SET role = NULL WHERE room_id = $1',
+    [roomId]
   );
 }
 

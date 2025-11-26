@@ -11,6 +11,8 @@ import {
   getPlayersInRoom,
   ensurePoolInitialized,
   updateRoomStatus,
+  updatePlayerRole,
+  clearPlayerRolesInRoom,
 } from './db';
 import { generatePassphrase } from './passphrase';
 import { RoomState, GameStartedEvent, PlayerRole, RoleAssignmentEvent } from './types';
@@ -44,10 +46,6 @@ function logWithTrace(level: 'info' | 'error' | 'warn', message: string, metadat
 
 // In-memory room state for active rooms
 const activeRooms = new Map<string, RoomState>();
-
-// In-memory role assignments: roomId -> playerId -> role
-// Using playerId instead of socketId because playerId is stable across reconnections
-const roleAssignments = new Map<string, Map<string, PlayerRole>>();
 
 async function removePlayerFromRoom(socketId: string, io: Server, socket?: Socket): Promise<void> {
   const span = tracer.startSpan('socket.io.remove-player', {
@@ -688,146 +686,84 @@ export function initializeRoomHandlers(io: Server): void {
         });
 
         // If game is active, also send role assignment if it exists
-        // Look up player by current socket_id, then get role by player.id
+        // Roles are now stored in the database, so read from player.role
         if (freshRoomState.room.status === 'active') {
-          const roomRoleMap = roleAssignments.get(roomId);
-          if (roomRoleMap) {
-            // Find the player with this socket_id
-            let player = freshRoomState.players.find(p => p.socket_id === socket.id);
+          // Find the player with this socket_id
+          let player = freshRoomState.players.find(p => p.socket_id === socket.id);
+          
+          // If player not found by socket_id, they may have reconnected
+          // Try to match them to a player with a stale socket_id who has a role
+          if (!player && freshRoomState.players.length > 0) {
+            // Get all connected sockets in this room
+            const socketsInRoom = await io.in(roomId).fetchSockets();
+            const connectedSocketIds = new Set(socketsInRoom.map(s => s.id));
             
-            // If player not found by socket_id, they may have reconnected
-            // Check if any player in the room has a stale socket_id (not connected)
-            // and try to match them by checking if this socket should have a role
-            if (!player && freshRoomState.players.length > 0) {
-              // Find players with stale socket_ids (their socket is not connected)
-              const playersWithStaleSockets = freshRoomState.players.filter(p => {
-                const oldSocket = io.sockets.sockets.get(p.socket_id);
-                return !oldSocket && roomRoleMap.has(p.id);
-              });
-              
-              // If there's exactly one player with a stale socket and roles, assume this is them
-              // This is a heuristic but should work for most cases
-              if (playersWithStaleSockets.length === 1) {
-                const stalePlayer = playersWithStaleSockets[0];
-                // Update their socket_id in the database
-                try {
-                  const dbPool = ensurePoolInitialized();
-                  await dbPool.query(
-                    'UPDATE players SET socket_id = $1 WHERE id = $2',
-                    [socket.id, stalePlayer.id]
-                  );
-                  // Refresh room state
-                  const updatedState = await getRoomWithPlayers(roomId);
-                  if (updatedState) {
-                    player = updatedState.players.find(p => p.id === stalePlayer.id);
-                    logWithTrace('info', 'Updated stale socket_id during sync', {
-                      roomId,
-                      playerId: stalePlayer.id,
-                      oldSocketId: stalePlayer.socket_id,
-                      newSocketId: socket.id,
-                    });
-                  }
-                } catch (error) {
-                  logWithTrace('error', 'Error updating socket_id during sync', {
+            // Find players whose socket_ids are not connected (stale) but have roles
+            const playersWithStaleSockets = freshRoomState.players.filter(p => 
+              !connectedSocketIds.has(p.socket_id) && p.role
+            );
+            
+            // Find connected sockets that don't have a matching player record
+            const unmatchedSockets = socketsInRoom.filter(s => 
+              !freshRoomState.players.some(p => p.socket_id === s.id)
+            );
+            
+            // If this socket is unmatched and there are players with stale sockets, try to match
+            if (unmatchedSockets.some(s => s.id === socket.id) && playersWithStaleSockets.length > 0) {
+              // Find the index of this socket in the unmatched list
+              const socketIndex = unmatchedSockets.findIndex(s => s.id === socket.id);
+              // Match to the stale player at the same index (or first one if index is out of bounds)
+              const stalePlayer = playersWithStaleSockets[Math.min(socketIndex, playersWithStaleSockets.length - 1)];
+              try {
+                // Update socket_id in database
+                const dbPool = ensurePoolInitialized();
+                await dbPool.query(
+                  'UPDATE players SET socket_id = $1 WHERE id = $2',
+                  [socket.id, stalePlayer.id]
+                );
+                // Refresh room state to get updated player
+                const updatedState = await getRoomWithPlayers(roomId);
+                if (updatedState) {
+                  player = updatedState.players.find(p => p.id === stalePlayer.id);
+                  logWithTrace('info', 'Matched unmatched socket to stale player', {
                     roomId,
-                    error: error instanceof Error ? error.message : String(error),
+                    playerId: stalePlayer.id,
+                    socketId: socket.id,
+                    role: stalePlayer.role,
                   });
                 }
-              } else if (playersWithStaleSockets.length > 1) {
-                // Multiple players with stale sockets - can't determine which one
-                logWithTrace('warn', 'Multiple players with stale sockets, cannot determine which one', {
+              } catch (error) {
+                logWithTrace('error', 'Error matching socket to player', {
                   roomId,
-                  socketId: socket.id,
-                  stalePlayers: playersWithStaleSockets.map(p => ({ id: p.id, socketId: p.socket_id })),
+                  error: error instanceof Error ? error.message : String(error),
                 });
               }
             }
-            
-            if (player) {
-              const role = roomRoleMap.get(player.id);
-              if (role) {
-                const roleAssignmentEvent: RoleAssignmentEvent = { role };
-                socket.emit('role-assigned', roleAssignmentEvent);
-                logWithTrace('info', 'Sent role assignment during sync', {
-                  roomId,
-                  playerId: player.id,
-                  socketId: socket.id,
-                  role,
-                });
-              } else {
-                logWithTrace('warn', 'No role found for player during sync', {
-                  roomId,
-                  playerId: player.id,
-                  socketId: socket.id,
-                  availableRoles: Array.from(roomRoleMap.keys()),
-                });
-              }
-            } else {
-              // Player not found - this socket might belong to a player who reconnected
-              // Get all connected sockets in this room
-              const socketsInRoom = await io.in(roomId).fetchSockets();
-              const connectedSocketIds = new Set(socketsInRoom.map(s => s.id));
-              
-              // Find players whose socket_ids are not connected (stale) but have roles
-              const playersWithStaleSockets = freshRoomState.players.filter(p => 
-                !connectedSocketIds.has(p.socket_id) && roomRoleMap.has(p.id)
-              );
-              
-              // Find connected sockets that don't have a matching player record
-              const unmatchedSockets = socketsInRoom.filter(s => 
-                !freshRoomState.players.some(p => p.socket_id === s.id)
-              );
-              
-              logWithTrace('warn', 'Player not found in room during sync', {
+          }
+          
+          if (player) {
+            const role = player.role as PlayerRole | null | undefined;
+            if (role) {
+              const roleAssignmentEvent: RoleAssignmentEvent = { role };
+              socket.emit('role-assigned', roleAssignmentEvent);
+              logWithTrace('info', 'Sent role assignment during sync', {
                 roomId,
+                playerId: player.id,
                 socketId: socket.id,
-                playersInRoom: freshRoomState.players.map(p => ({ id: p.id, socketId: p.socket_id })),
-                playersWithStaleSockets: playersWithStaleSockets.length,
-                unmatchedSockets: unmatchedSockets.length,
+                role,
               });
-              
-              // If this socket is unmatched and there are players with stale sockets, try to match
-              // Simple approach: match this socket to the first stale player that has a role
-              // We'll match in order - first unmatched socket gets first stale player, etc.
-              if (unmatchedSockets.some(s => s.id === socket.id) && playersWithStaleSockets.length > 0) {
-                // Find the index of this socket in the unmatched list
-                const socketIndex = unmatchedSockets.findIndex(s => s.id === socket.id);
-                // Match to the stale player at the same index (or first one if index is out of bounds)
-                const stalePlayer = playersWithStaleSockets[Math.min(socketIndex, playersWithStaleSockets.length - 1)];
-                const role = roomRoleMap.get(stalePlayer.id);
-                if (role) {
-                  try {
-                    // Update socket_id in database
-                    const dbPool = ensurePoolInitialized();
-                    await dbPool.query(
-                      'UPDATE players SET socket_id = $1 WHERE id = $2',
-                      [socket.id, stalePlayer.id]
-                    );
-                    // Send role
-                    const roleAssignmentEvent: RoleAssignmentEvent = { role };
-                    socket.emit('role-assigned', roleAssignmentEvent);
-                    logWithTrace('info', 'Matched unmatched socket to stale player and sent role', {
-                      roomId,
-                      playerId: stalePlayer.id,
-                      socketId: socket.id,
-                      role,
-                      socketIndex,
-                      unmatchedCount: unmatchedSockets.length,
-                      staleCount: playersWithStaleSockets.length,
-                    });
-                  } catch (error) {
-                    logWithTrace('error', 'Error matching socket to player', {
-                      roomId,
-                      error: error instanceof Error ? error.message : String(error),
-                    });
-                  }
-                }
-              }
+            } else {
+              logWithTrace('warn', 'No role found for player during sync', {
+                roomId,
+                playerId: player.id,
+                socketId: socket.id,
+              });
             }
           } else {
-            logWithTrace('warn', 'No role assignments found for room during sync', {
+            logWithTrace('warn', 'Player not found in room during sync', {
               roomId,
               socketId: socket.id,
+              playersInRoom: freshRoomState.players.map(p => ({ id: p.id, socketId: p.socket_id, role: p.role })),
             });
           }
         }
@@ -976,31 +912,41 @@ export function initializeRoomHandlers(io: Server): void {
           }
         }
 
+        // Clear any existing roles for this room
+        await clearPlayerRolesInRoom(roomId);
+        
         // Assign roles to players: 1 Swiper, 1 Swipefish, X-2 Matches
         const newRoleAssignments = assignRoles(updatedRoomState.players);
         
-        // Store role assignments in memory by playerId (stable across reconnections)
-        const roomRoleMap = new Map<string, PlayerRole>();
+        // Store role assignments in database (persistent across reconnections and server restarts)
         for (const player of updatedRoomState.players) {
           const role = newRoleAssignments.get(player.socket_id);
           if (role) {
-            // Store by playerId, not socketId, so roles persist across reconnections
-            roomRoleMap.set(player.id, role);
+            await updatePlayerRole(player.id, role);
+            logWithTrace('info', 'Assigned and stored role in database', {
+              roomId,
+              playerId: player.id,
+              socketId: player.socket_id,
+              role,
+            });
           }
         }
-        roleAssignments.set(roomId, roomRoleMap);
         
-        logWithTrace('info', 'Assigned roles to players', {
-          roomId,
-          roleCount: roomRoleMap.size,
-          playerCount: updatedRoomState.players.length,
-          roles: Array.from(roomRoleMap.entries()).map(([playerId, role]) => ({ playerId, role })),
-        });
+        // Refresh room state to get roles from database
+        const roomStateWithRoles = await getRoomWithPlayers(roomId);
+        if (!roomStateWithRoles) {
+          logWithTrace('error', 'Failed to load room state with roles', { roomId });
+        } else {
+          logWithTrace('info', 'Assigned roles to players', {
+            roomId,
+            playerCount: roomStateWithRoles.players.length,
+            roles: roomStateWithRoles.players.map(p => ({ playerId: p.id, role: p.role })),
+          });
+        }
         
         // Send role assignment to each player individually
-        // Use the stored roomRoleMap which is keyed by player.id
         for (const player of updatedRoomState.players) {
-          const role = roomRoleMap.get(player.id);
+          const role = newRoleAssignments.get(player.socket_id);
           if (role) {
             const targetSocket = io.sockets.sockets.get(player.socket_id);
             if (targetSocket) {
@@ -1039,22 +985,27 @@ export function initializeRoomHandlers(io: Server): void {
         // This ensures delivery even if socket.io room membership is out of sync
         io.to(roomId).emit('game-started', gameStartedEvent);
         
+        // Refresh room state to get roles from database before sending fallback
+        const roomStateWithRolesForFallback = await getRoomWithPlayers(roomId);
+        const playersWithRoles = roomStateWithRolesForFallback?.players || updatedRoomState.players;
+        
         // Also send directly to each player as a fallback, along with their role
-        for (const player of updatedRoomState.players) {
-          const targetSocket = io.sockets.sockets.get(player.socket_id);
+        for (const dbPlayer of playersWithRoles) {
+          const targetSocket = io.sockets.sockets.get(dbPlayer.socket_id);
           if (targetSocket) {
             // Send game-started event
             targetSocket.emit('game-started', gameStartedEvent);
             
             // Also send role assignment if it exists (in case they missed the initial role-assigned event)
-            const role = roomRoleMap.get(player.id);
+            // Get role from database
+            const role = dbPlayer.role as PlayerRole | null | undefined;
             if (role) {
               const roleAssignmentEvent: RoleAssignmentEvent = { role };
               targetSocket.emit('role-assigned', roleAssignmentEvent);
               logWithTrace('info', 'Sent role assignment with game-started fallback', {
                 roomId,
-                playerId: player.id,
-                socketId: player.socket_id,
+                playerId: dbPlayer.id,
+                socketId: dbPlayer.socket_id,
                 role,
               });
             }
@@ -1062,8 +1013,8 @@ export function initializeRoomHandlers(io: Server): void {
             // Log if socket not found - this player will get role via sync
             logWithTrace('warn', 'Socket not found when sending game-started, will sync later', {
               roomId,
-              playerId: player.id,
-              socketId: player.socket_id,
+              playerId: dbPlayer.id,
+              socketId: dbPlayer.socket_id,
             });
           }
         }
