@@ -88,7 +88,10 @@ export function Room() {
         const hasPersonaInState = !!(prevPersonaNumber && prevPersonaName && prevPersonaTagline);
         const personaAppeared = hasPersonaInSync && !hasPersonaInState;
         
-        if (playerIdsChanged || playerCountChanged || statusChanged || personaChanged || personaAppeared) {
+        // Always update if persona appeared or if any other field changed
+        // This ensures persona data is always applied when it's present in sync
+        // Also update if persona exists in sync (even if it also exists in state) to ensure it's always fresh
+        if (playerIdsChanged || playerCountChanged || statusChanged || personaChanged || personaAppeared || hasPersonaInSync) {
           console.log('Room component: Room state changed, updating from sync', {
             playerIdsChanged,
             playerCountChanged,
