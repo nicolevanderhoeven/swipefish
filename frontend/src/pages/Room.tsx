@@ -291,11 +291,17 @@ export function Room() {
   // Extract persona data for rendering (computed outside JSX for Safari compatibility)
   // Using explicit property access to avoid Safari issues with optional chaining
   const personaData = useMemo(() => {
+    console.warn('🔧 useMemo RUNNING - roomState:', roomState ? 'EXISTS' : 'NULL');
+    
     if (!roomState) {
+      console.warn('🔧 useMemo: No roomState, returning null');
       return null;
     }
     
+    console.warn('🔧 useMemo: roomStatus =', roomState.room.status);
+    
     if (roomState.room.status !== 'active') {
+      console.warn('🔧 useMemo: Status not active, returning null');
       return null;
     }
     
@@ -305,13 +311,18 @@ export function Room() {
     const personaName = (room as any).swiper_persona_name || (room as any).swiperPersonaName || null;
     const personaTagline = (room as any).swiper_persona_tagline || (room as any).swiperPersonaTagline || null;
     
-    // Explicit check for all three fields
-    const hasPersona = personaNumber !== null && personaName !== null && personaTagline !== null && 
-                       personaNumber !== undefined && personaName !== undefined && personaTagline !== undefined &&
-                       personaNumber !== '' && personaName !== '' && personaTagline !== '';
+    console.warn('🔧 useMemo: Extracted values:', {
+      personaNumber,
+      personaName,
+      personaTagline,
+      personaNumberType: typeof personaNumber,
+      personaNameType: typeof personaName,
+      personaTaglineType: typeof personaTagline,
+    });
     
-    // Log for debugging - this should show for ALL players
-    // Use console.warn for Safari visibility (Safari sometimes hides console.log)
+    // Explicit check for all three fields - be more lenient
+    const hasPersona = personaNumber && personaName && personaTagline;
+    
     console.warn('🎯 PERSONA COMPUTATION RESULT:', {
       playerRole,
       personaNumber,
@@ -333,13 +344,16 @@ export function Room() {
     }
     
     if (hasPersona) {
-      return {
+      const result = {
         personaNumber: String(personaNumber),
         personaName: String(personaName),
         personaTagline: String(personaTagline),
       };
+      console.warn('✅ useMemo: Returning persona object:', result);
+      return result;
     }
     
+    console.warn('❌ useMemo: Returning null (no persona)');
     return null;
   }, [roomState, playerRole]);
 
@@ -422,35 +436,48 @@ export function Room() {
         {roomState.room.status === 'active' && (
           <div className="game-status-section">
             <p className="game-active-message">🎮 Game is in progress!</p>
-            {personaData !== null && personaData !== undefined ? (
-              <div className="swiper-persona-card" data-testid="swiper-persona-card" style={{ border: '5px solid green' }}>
-                <p className="swiper-persona-label">Swiper's Persona:</p>
-                <div className="swiper-persona-content">
-                  <img
-                    src={getPersonaImagePath(
-                      personaData.personaNumber || '',
-                      personaData.personaName || ''
-                    )}
-                    alt={personaData.personaName || ''}
-                    className="swiper-persona-image"
-                    onError={(e) => {
-                      alert('Persona image failed to load!');
-                      // Hide image if it fails to load
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                    onLoad={() => {
-                      alert('Persona image loaded!');
-                    }}
-                  />
-                  <p className="swiper-persona-name">{personaData.personaName || ''}</p>
-                  <p className="swiper-persona-tagline">"{personaData.personaTagline || ''}"</p>
-                </div>
-              </div>
-            ) : (
-              <div style={{ padding: '20px', background: '#ffcccc', margin: '20px 0', border: '5px solid red', fontSize: '18px', fontWeight: 'bold' }}>
-                ⚠️ DEBUG: Persona data is null/undefined. personaData = {JSON.stringify(personaData)}
-              </div>
-            )}
+            {(() => {
+              console.warn('🎨 RENDERING CHECK: personaData =', personaData);
+              console.warn('🎨 RENDERING CHECK: personaData !== null =', personaData !== null);
+              console.warn('🎨 RENDERING CHECK: personaData !== undefined =', personaData !== undefined);
+              console.warn('🎨 RENDERING CHECK: roomStatus =', roomState.room.status);
+              
+              if (personaData !== null && personaData !== undefined) {
+                console.warn('✅ RENDERING: Showing persona card');
+                return (
+                  <div className="swiper-persona-card" data-testid="swiper-persona-card" style={{ border: '5px solid green' }}>
+                    <p className="swiper-persona-label">Swiper's Persona:</p>
+                    <div className="swiper-persona-content">
+                      <img
+                        src={getPersonaImagePath(
+                          personaData.personaNumber || '',
+                          personaData.personaName || ''
+                        )}
+                        alt={personaData.personaName || ''}
+                        className="swiper-persona-image"
+                        onError={(e) => {
+                          console.error('❌ Persona image failed to load!');
+                          // Hide image if it fails to load
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                        onLoad={() => {
+                          console.warn('✅ Persona image loaded successfully!');
+                        }}
+                      />
+                      <p className="swiper-persona-name">{personaData.personaName || ''}</p>
+                      <p className="swiper-persona-tagline">"{personaData.personaTagline || ''}"</p>
+                    </div>
+                  </div>
+                );
+              } else {
+                console.warn('❌ RENDERING: Persona data is null/undefined. Showing debug box.');
+                return (
+                  <div style={{ padding: '20px', background: '#ffcccc', margin: '20px 0', border: '5px solid red', fontSize: '18px', fontWeight: 'bold' }}>
+                    ⚠️ DEBUG: Persona data is null/undefined. personaData = {JSON.stringify(personaData)}
+                  </div>
+                );
+              }
+            })()}
             {playerRole && (
               <div className="role-display">
                 <p className="role-label">Your Role:</p>
