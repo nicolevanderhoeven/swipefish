@@ -65,7 +65,7 @@ export function Room() {
       });
       console.log('Room component: Sync - All room keys:', Object.keys(syncedRoom.room));
       setRoomState((prevState) => {
-        // Check if state changed: player count, player IDs, or room status
+        // Check if state changed: player count, player IDs, room status, or persona data
         const prevPlayerIds = prevState?.players.map(p => p.id).sort().join(',') || '';
         const newPlayerIds = syncedRoom.players.map(p => p.id).sort().join(',');
         const prevStatus = prevState?.room.status || 'waiting';
@@ -74,13 +74,23 @@ export function Room() {
         const playerIdsChanged = prevPlayerIds !== newPlayerIds;
         const statusChanged = prevStatus !== newStatus;
         
-        if (playerIdsChanged || playerCountChanged || statusChanged) {
+        // Check if persona data changed or appeared
+        const prevPersonaNumber = prevState?.room.swiper_persona_number || null;
+        const newPersonaNumber = syncedRoom.room.swiper_persona_number || null;
+        const prevPersonaName = prevState?.room.swiper_persona_name || null;
+        const newPersonaName = syncedRoom.room.swiper_persona_name || null;
+        const personaChanged = prevPersonaNumber !== newPersonaNumber || prevPersonaName !== newPersonaName;
+        
+        if (playerIdsChanged || playerCountChanged || statusChanged || personaChanged) {
           console.log('Room component: Room state changed, updating from sync', {
             playerIdsChanged,
             playerCountChanged,
             statusChanged,
+            personaChanged,
             prevStatus,
             newStatus,
+            prevPersonaName,
+            newPersonaName,
           });
           
           // If game status changed to active and we don't have a role yet, 
