@@ -787,10 +787,13 @@ export function initializeRoomHandlers(io: Server): void {
               });
               
               // If this socket is unmatched and there are players with stale sockets, try to match
+              // Simple approach: match this socket to the first stale player that has a role
+              // We'll match in order - first unmatched socket gets first stale player, etc.
               if (unmatchedSockets.some(s => s.id === socket.id) && playersWithStaleSockets.length > 0) {
-                // Simple heuristic: if there's one unmatched socket and one stale player, match them
-                // Otherwise, try to match this socket to the first stale player
-                const stalePlayer = playersWithStaleSockets[0];
+                // Find the index of this socket in the unmatched list
+                const socketIndex = unmatchedSockets.findIndex(s => s.id === socket.id);
+                // Match to the stale player at the same index (or first one if index is out of bounds)
+                const stalePlayer = playersWithStaleSockets[Math.min(socketIndex, playersWithStaleSockets.length - 1)];
                 const role = roomRoleMap.get(stalePlayer.id);
                 if (role) {
                   try {
@@ -808,6 +811,9 @@ export function initializeRoomHandlers(io: Server): void {
                       playerId: stalePlayer.id,
                       socketId: socket.id,
                       role,
+                      socketIndex,
+                      unmatchedCount: unmatchedSockets.length,
+                      staleCount: playersWithStaleSockets.length,
                     });
                   } catch (error) {
                     logWithTrace('error', 'Error matching socket to player', {
