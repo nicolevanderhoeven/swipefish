@@ -97,6 +97,12 @@ export function Room() {
 
   const handleGameStarted = useCallback((event: GameStartedEvent) => {
     console.log('Room component: Received game-started event', event);
+    console.log('Room component: Room object:', event.room);
+    console.log('Room component: Persona fields:', {
+      personaNumber: event.room.room.swiper_persona_number,
+      personaName: event.room.room.swiper_persona_name,
+      personaTagline: event.room.room.swiper_persona_tagline,
+    });
     setRoomState(event.room);
     setIsStartingGame(false);
     setError(null);

@@ -287,10 +287,18 @@ export async function clearPlayerRolesInRoom(roomId: string): Promise<void> {
 export async function updateSwiperPersona(roomId: string, personaNumber: string, personaName: string, personaTagline: string): Promise<void> {
   const dbPool = ensurePoolInitialized();
 
-  await dbPool.query(
-    'UPDATE rooms SET swiper_persona_number = $1, swiper_persona_name = $2, swiper_persona_tagline = $3 WHERE id = $4',
+  console.log('DEBUG: updateSwiperPersona called with:', { roomId, personaNumber, personaName, personaTagline });
+
+  const result = await dbPool.query(
+    'UPDATE rooms SET swiper_persona_number = $1, swiper_persona_name = $2, swiper_persona_tagline = $3 WHERE id = $4 RETURNING swiper_persona_number, swiper_persona_name, swiper_persona_tagline',
     [personaNumber, personaName, personaTagline, roomId]
   );
+
+  console.log('DEBUG: updateSwiperPersona result:', result.rows[0]);
+  
+  if (result.rowCount === 0) {
+    console.error('ERROR: updateSwiperPersona - No rows updated for roomId:', roomId);
+  }
 }
 
 export async function cleanupEmptyRooms(): Promise<void> {

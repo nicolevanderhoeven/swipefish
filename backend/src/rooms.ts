@@ -924,6 +924,14 @@ export function initializeRoomHandlers(io: Server): void {
           })),
         };
 
+        // Debug: Log the actual room object being sent
+        console.log('DEBUG: formattedRoomState.room:', JSON.stringify(formattedRoomState.room, null, 2));
+        console.log('DEBUG: Persona fields:', {
+          personaNumber: formattedRoomState.room.swiper_persona_number,
+          personaName: formattedRoomState.room.swiper_persona_name,
+          personaTagline: formattedRoomState.room.swiper_persona_tagline,
+        });
+
         // Debug: Log formatted room state to verify persona data is included
         logWithTrace('info', 'Formatted room state for game-started event', {
           roomId,
