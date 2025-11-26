@@ -262,6 +262,8 @@ export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; 
     personaTagline: room.swiper_persona_tagline,
     allKeys: Object.keys(room),
   });
+  console.log('DEBUG: getRoomWithPlayers - Full room object:', JSON.stringify(room, null, 2));
+  console.log('DEBUG: getRoomWithPlayers - Raw query result row:', JSON.stringify(roomResult.rows[0], null, 2));
 
   return {
     room,
