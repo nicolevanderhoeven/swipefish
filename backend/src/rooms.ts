@@ -763,11 +763,60 @@ export function initializeRoomHandlers(io: Server): void {
                 });
               }
             } else {
+              // Player not found - this socket might belong to a player who reconnected
+              // Get all connected sockets in this room
+              const socketsInRoom = await io.in(roomId).fetchSockets();
+              const connectedSocketIds = new Set(socketsInRoom.map(s => s.id));
+              
+              // Find players whose socket_ids are not connected (stale) but have roles
+              const playersWithStaleSockets = freshRoomState.players.filter(p => 
+                !connectedSocketIds.has(p.socket_id) && roomRoleMap.has(p.id)
+              );
+              
+              // Find connected sockets that don't have a matching player record
+              const unmatchedSockets = socketsInRoom.filter(s => 
+                !freshRoomState.players.some(p => p.socket_id === s.id)
+              );
+              
               logWithTrace('warn', 'Player not found in room during sync', {
                 roomId,
                 socketId: socket.id,
                 playersInRoom: freshRoomState.players.map(p => ({ id: p.id, socketId: p.socket_id })),
+                playersWithStaleSockets: playersWithStaleSockets.length,
+                unmatchedSockets: unmatchedSockets.length,
               });
+              
+              // If this socket is unmatched and there are players with stale sockets, try to match
+              if (unmatchedSockets.some(s => s.id === socket.id) && playersWithStaleSockets.length > 0) {
+                // Simple heuristic: if there's one unmatched socket and one stale player, match them
+                // Otherwise, try to match this socket to the first stale player
+                const stalePlayer = playersWithStaleSockets[0];
+                const role = roomRoleMap.get(stalePlayer.id);
+                if (role) {
+                  try {
+                    // Update socket_id in database
+                    const dbPool = ensurePoolInitialized();
+                    await dbPool.query(
+                      'UPDATE players SET socket_id = $1 WHERE id = $2',
+                      [socket.id, stalePlayer.id]
+                    );
+                    // Send role
+                    const roleAssignmentEvent: RoleAssignmentEvent = { role };
+                    socket.emit('role-assigned', roleAssignmentEvent);
+                    logWithTrace('info', 'Matched unmatched socket to stale player and sent role', {
+                      roomId,
+                      playerId: stalePlayer.id,
+                      socketId: socket.id,
+                      role,
+                    });
+                  } catch (error) {
+                    logWithTrace('error', 'Error matching socket to player', {
+                      roomId,
+                      error: error instanceof Error ? error.message : String(error),
+                    });
+                  }
+                }
+              }
             }
           } else {
             logWithTrace('warn', 'No role assignments found for room during sync', {
