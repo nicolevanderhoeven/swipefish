@@ -3,6 +3,9 @@ export interface Room {
   passphrase: string;
   created_at: string;
   status: 'waiting' | 'active' | 'finished';
+  swiper_persona_number?: string | null;
+  swiper_persona_name?: string | null;
+  swiper_persona_tagline?: string | null;
 }
 
 export interface Player {
