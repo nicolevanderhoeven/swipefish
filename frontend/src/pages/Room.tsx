@@ -8,6 +8,41 @@ import { getPlayerName } from '../utils/playerName';
 import { getPersonaImagePath } from '../utils/personaImage';
 import './Room.css';
 
+function PersonaCard({ personaNumber, personaName, personaTagline }: { personaNumber: string; personaName: string; personaTagline: string }) {
+  const [imageError, setImageError] = useState(false);
+
+  // Reset error state when persona changes
+  useEffect(() => {
+    setImageError(false);
+  }, [personaNumber]);
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  return (
+    <div className="swiper-persona-card" data-testid="swiper-persona-card">
+      <p className="swiper-persona-label">Swiper's Persona:</p>
+      <div className="swiper-persona-content">
+        {!imageError && (
+          <img
+            src={getPersonaImagePath(personaNumber, personaName)}
+            alt={personaName}
+            className="swiper-persona-image"
+            onError={handleImageError}
+          />
+        )}
+        {imageError && (
+          <>
+            <p className="swiper-persona-name">{personaName}</p>
+            <p className="swiper-persona-tagline">"{personaTagline}"</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function Room() {
   const { passphrase } = useParams<{ passphrase: string }>();
   const { socket, isConnected, error: socketError } = useSocket();
@@ -301,22 +336,11 @@ export function Room() {
               return (
                 <>
                   {hasPersona && (
-                    <div className="swiper-persona-card" data-testid="swiper-persona-card">
-                      <p className="swiper-persona-label">Swiper's Persona:</p>
-                      <div className="swiper-persona-content">
-                        <img
-                          src={getPersonaImagePath(String(personaNumber), String(personaName))}
-                          alt={String(personaName)}
-                          className="swiper-persona-image"
-                          onError={(e) => {
-                            console.error('Persona image failed to load:', e);
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                        <p className="swiper-persona-name">{String(personaName)}</p>
-                        <p className="swiper-persona-tagline">"{String(personaTagline)}"</p>
-                      </div>
-                    </div>
+                    <PersonaCard
+                      personaNumber={String(personaNumber)}
+                      personaName={String(personaName)}
+                      personaTagline={String(personaTagline)}
+                    />
                   )}
                   {playerRole && (
                     <div className="role-display">

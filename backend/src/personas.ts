@@ -119,23 +119,17 @@ export function loadPersonas(): PersonaCard[] {
 }
 
 /**
- * Select a random persona from the first 29 personas (P001-P029)
+ * Select a random persona from all available personas
  */
 export function selectRandomPersona(): PersonaCard {
   const allPersonas = loadPersonas();
   
-  // Only use the first 29 personas (P001-P029)
-  const availablePersonas = allPersonas.filter(p => {
-    const num = parseInt(p.personaNumber.replace('P', ''));
-    return num >= 1 && num <= 29;
-  });
-  
-  if (availablePersonas.length === 0) {
+  if (allPersonas.length === 0) {
     throw new Error('No personas available');
   }
   
-  const randomIndex = Math.floor(Math.random() * availablePersonas.length);
-  return availablePersonas[randomIndex];
+  const randomIndex = Math.floor(Math.random() * allPersonas.length);
+  return allPersonas[randomIndex];
 }
 
 /**
