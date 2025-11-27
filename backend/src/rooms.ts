@@ -13,8 +13,10 @@ import {
   updateRoomStatus,
   updatePlayerRole,
   clearPlayerRolesInRoom,
+  updateSwiperPersona,
 } from './db';
 import { generatePassphrase } from './passphrase';
+import { selectRandomPersona } from './personas';
 import { RoomState, GameStartedEvent, PlayerRole, RoleAssignmentEvent } from './types';
 
 const tracer = trace.getTracer('swipefish-rooms', '1.0.0');
@@ -917,6 +919,31 @@ export function initializeRoomHandlers(io: Server): void {
         
         // Assign roles to players: 1 Swiper, 1 Swipefish, X-2 Matches
         const newRoleAssignments = assignRoles(updatedRoomState.players);
+        
+        // Assign a random persona to the Swiper
+        const swiperSocketId = Array.from(newRoleAssignments.entries()).find(([_, role]) => role === 'swiper')?.[0];
+        if (swiperSocketId) {
+          try {
+            const selectedPersona = selectRandomPersona();
+            await updateSwiperPersona(
+              roomId,
+              selectedPersona.personaNumber,
+              selectedPersona.persona,
+              selectedPersona.tagline
+            );
+            logWithTrace('info', 'Assigned persona to Swiper', {
+              roomId,
+              personaNumber: selectedPersona.personaNumber,
+              personaName: selectedPersona.persona,
+            });
+          } catch (error) {
+            logWithTrace('error', 'Failed to assign persona to Swiper', {
+              roomId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+            // Don't fail the game start if persona assignment fails
+          }
+        }
         
         // Store role assignments in database (persistent across reconnections and server restarts)
         for (const player of updatedRoomState.players) {

@@ -61,6 +61,22 @@ export async function createTables(): Promise<void> {
     )
   `);
 
+  // Add persona columns if they don't exist
+  await dbPool.query(`
+    ALTER TABLE rooms 
+    ADD COLUMN IF NOT EXISTS swiper_persona_number VARCHAR(10)
+  `);
+  
+  await dbPool.query(`
+    ALTER TABLE rooms 
+    ADD COLUMN IF NOT EXISTS swiper_persona_name VARCHAR(255)
+  `);
+  
+  await dbPool.query(`
+    ALTER TABLE rooms 
+    ADD COLUMN IF NOT EXISTS swiper_persona_tagline TEXT
+  `);
+
   await dbPool.query(`
     CREATE TABLE IF NOT EXISTS players (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -185,7 +201,15 @@ export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; 
   const dbPool = ensurePoolInitialized();
 
   const roomResult = await dbPool.query<Room>(
-    'SELECT * FROM rooms WHERE id = $1',
+    `SELECT 
+      id, 
+      passphrase, 
+      created_at, 
+      status, 
+      swiper_persona_number, 
+      swiper_persona_name, 
+      swiper_persona_tagline 
+    FROM rooms WHERE id = $1`,
     [roomId]
   );
 
@@ -193,8 +217,18 @@ export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; 
 
   const players = await getPlayersInRoom(roomId);
 
+  const room = {
+    id: roomResult.rows[0].id,
+    passphrase: roomResult.rows[0].passphrase,
+    created_at: roomResult.rows[0].created_at,
+    status: roomResult.rows[0].status,
+    swiper_persona_number: roomResult.rows[0].swiper_persona_number,
+    swiper_persona_name: roomResult.rows[0].swiper_persona_name,
+    swiper_persona_tagline: roomResult.rows[0].swiper_persona_tagline,
+  };
+
   return {
-    room: roomResult.rows[0],
+    room,
     players,
   };
 }
@@ -223,6 +257,24 @@ export async function clearPlayerRolesInRoom(roomId: string): Promise<void> {
   await dbPool.query(
     'UPDATE players SET role = NULL WHERE room_id = $1',
     [roomId]
+  );
+}
+
+export async function updateSwiperPersona(
+  roomId: string,
+  personaNumber: string,
+  personaName: string,
+  personaTagline: string
+): Promise<void> {
+  const dbPool = ensurePoolInitialized();
+
+  await dbPool.query(
+    `UPDATE rooms 
+     SET swiper_persona_number = $1, 
+         swiper_persona_name = $2, 
+         swiper_persona_tagline = $3 
+     WHERE id = $4`,
+    [personaNumber, personaName, personaTagline, roomId]
   );
 }
 
