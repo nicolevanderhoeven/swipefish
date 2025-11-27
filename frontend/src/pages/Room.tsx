@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
 import { Logo } from '../components/Logo';
@@ -56,32 +56,6 @@ export function Room() {
     if (response.success && response.room) {
       const syncedRoom = response.room; // Capture in local variable for type narrowing
       console.log('Room component: Received room-state-sync', syncedRoom);
-      
-      // Explicitly check for persona fields and log them prominently
-      const room = syncedRoom.room;
-      const personaNumber = (room as any).swiper_persona_number || (room as any).swiperPersonaNumber;
-      const personaName = (room as any).swiper_persona_name || (room as any).swiperPersonaName;
-      const personaTagline = (room as any).swiper_persona_tagline || (room as any).swiperPersonaTagline;
-      
-      console.warn('🔍 SAFARI PERSONA CHECK:', {
-        hasPersonaNumber: !!personaNumber,
-        hasPersonaName: !!personaName,
-        hasPersonaTagline: !!personaTagline,
-        personaNumber: personaNumber,
-        personaName: personaName,
-        personaTagline: personaTagline,
-        allRoomKeys: Object.keys(room),
-        roomStatus: room.status,
-      });
-      
-      console.log('Room component: Sync - Room.room object:', syncedRoom.room);
-      console.log('Room component: Sync - Full room object JSON:', JSON.stringify(syncedRoom.room, null, 2));
-      console.log('Room component: Sync - Persona fields:', {
-        personaNumber: syncedRoom.room.swiper_persona_number,
-        personaName: syncedRoom.room.swiper_persona_name,
-        personaTagline: syncedRoom.room.swiper_persona_tagline,
-      });
-      console.log('Room component: Sync - All room keys:', Object.keys(syncedRoom.room));
       setRoomState((prevState) => {
         // Check if state changed: player count, player IDs, room status, or persona data
         const prevPlayerIds = prevState?.players.map(p => p.id).sort().join(',') || '';
@@ -93,23 +67,15 @@ export function Room() {
         const statusChanged = prevStatus !== newStatus;
         
         // Check if persona data changed or appeared
-        const prevPersonaNumber = prevState?.room.swiper_persona_number || null;
-        const newPersonaNumber = syncedRoom.room.swiper_persona_number || null;
-        const prevPersonaName = prevState?.room.swiper_persona_name || null;
-        const newPersonaName = syncedRoom.room.swiper_persona_name || null;
-        const prevPersonaTagline = prevState?.room.swiper_persona_tagline || null;
-        const newPersonaTagline = syncedRoom.room.swiper_persona_tagline || null;
-        const personaChanged = prevPersonaNumber !== newPersonaNumber || prevPersonaName !== newPersonaName || prevPersonaTagline !== newPersonaTagline;
+        const room = syncedRoom.room as any;
+        const prevPersonaNumber = (prevState?.room as any)?.swiper_persona_number;
+        const newPersonaNumber = room?.swiper_persona_number;
+        const prevPersonaName = (prevState?.room as any)?.swiper_persona_name;
+        const newPersonaName = room?.swiper_persona_name;
+        const personaChanged = prevPersonaNumber !== newPersonaNumber || prevPersonaName !== newPersonaName;
+        const personaAppeared = !prevPersonaNumber && newPersonaNumber;
         
-        // Always update if persona data exists in sync but not in current state
-        const hasPersonaInSync = !!(newPersonaNumber && newPersonaName && newPersonaTagline);
-        const hasPersonaInState = !!(prevPersonaNumber && prevPersonaName && prevPersonaTagline);
-        const personaAppeared = hasPersonaInSync && !hasPersonaInState;
-        
-        // Always update if persona appeared or if any other field changed
-        // This ensures persona data is always applied when it's present in sync
-        // Also update if persona exists in sync (even if it also exists in state) to ensure it's always fresh
-        if (playerIdsChanged || playerCountChanged || statusChanged || personaChanged || personaAppeared || hasPersonaInSync) {
+        if (playerIdsChanged || playerCountChanged || statusChanged || personaChanged || personaAppeared) {
           console.log('Room component: Room state changed, updating from sync', {
             playerIdsChanged,
             playerCountChanged,
@@ -118,10 +84,7 @@ export function Room() {
             personaAppeared,
             prevStatus,
             newStatus,
-            prevPersonaName,
             newPersonaName,
-            hasPersonaInSync,
-            hasPersonaInState,
           });
           
           // If game status changed to active and we don't have a role yet, 
@@ -146,17 +109,6 @@ export function Room() {
 
   const handleGameStarted = useCallback((event: GameStartedEvent) => {
     console.log('Room component: Received game-started event', event);
-    console.log('Room component: Room object:', event.room);
-    console.log('Room component: Room.room object:', event.room.room);
-    console.log('Room component: Full room.room JSON:', JSON.stringify(event.room.room, null, 2));
-    console.log('Room component: Persona fields:', {
-      personaNumber: event.room.room.swiper_persona_number,
-      personaName: event.room.room.swiper_persona_name,
-      personaTagline: event.room.room.swiper_persona_tagline,
-    });
-    console.log('Room component: All room keys:', Object.keys(event.room.room));
-    console.log('Room component: Has persona number?', !!event.room.room.swiper_persona_number);
-    console.log('Room component: Has persona name?', !!event.room.room.swiper_persona_name);
     setRoomState(event.room);
     setIsStartingGame(false);
     setError(null);
@@ -288,75 +240,6 @@ export function Room() {
     }
   };
 
-  // Extract persona data for rendering (computed outside JSX for Safari compatibility)
-  // Using explicit property access to avoid Safari issues with optional chaining
-  const personaData = useMemo(() => {
-    console.warn('🔧 useMemo RUNNING - roomState:', roomState ? 'EXISTS' : 'NULL');
-    
-    if (!roomState) {
-      console.warn('🔧 useMemo: No roomState, returning null');
-      return null;
-    }
-    
-    console.warn('🔧 useMemo: roomStatus =', roomState.room.status);
-    
-    if (roomState.room.status !== 'active') {
-      console.warn('🔧 useMemo: Status not active, returning null');
-      return null;
-    }
-    
-    // Use explicit property access - Safari can be finicky with type assertions
-    const room = roomState.room;
-    const personaNumber = (room as any).swiper_persona_number || (room as any).swiperPersonaNumber || null;
-    const personaName = (room as any).swiper_persona_name || (room as any).swiperPersonaName || null;
-    const personaTagline = (room as any).swiper_persona_tagline || (room as any).swiperPersonaTagline || null;
-    
-    console.warn('🔧 useMemo: Extracted values:', {
-      personaNumber,
-      personaName,
-      personaTagline,
-      personaNumberType: typeof personaNumber,
-      personaNameType: typeof personaName,
-      personaTaglineType: typeof personaTagline,
-    });
-    
-    // Explicit check for all three fields - be more lenient
-    const hasPersona = personaNumber && personaName && personaTagline;
-    
-    console.warn('🎯 PERSONA COMPUTATION RESULT:', {
-      playerRole,
-      personaNumber,
-      personaName,
-      personaTagline,
-      hasPersona,
-      roomStatus: roomState.room.status,
-      allKeys: Object.keys(roomState.room),
-      willReturn: hasPersona ? 'PERSONA OBJECT' : 'NULL',
-    });
-    
-    // Also log directly to DOM for Safari debugging
-    if (typeof window !== 'undefined' && window.document) {
-      const debugDiv = document.getElementById('safari-debug');
-      if (debugDiv) {
-        debugDiv.textContent = `Persona: ${hasPersona ? 'FOUND' : 'MISSING'} - ${personaName || 'NO NAME'} - Status: ${roomState.room.status}`;
-        debugDiv.style.background = hasPersona ? 'lime' : 'red';
-      }
-    }
-    
-    if (hasPersona) {
-      const result = {
-        personaNumber: String(personaNumber),
-        personaName: String(personaName),
-        personaTagline: String(personaTagline),
-      };
-      console.warn('✅ useMemo: Returning persona object:', result);
-      return result;
-    }
-    
-    console.warn('❌ useMemo: Returning null (no persona)');
-    return null;
-  }, [roomState, playerRole]);
-
   const handleStartGame = () => {
     if (!socket || !roomState || isStartingGame) return;
     
@@ -369,38 +252,10 @@ export function Room() {
   const canStartGame = roomState?.room.status === 'waiting' && roomState.players.length >= MIN_PLAYERS;
   const playerCount = roomState?.players.length || 0;
 
-  // Force render debug info immediately
-  useEffect(() => {
-    const debugDiv = document.getElementById('safari-debug');
-    if (debugDiv) {
-      const hasPersona = personaData !== null && personaData !== undefined;
-      debugDiv.textContent = `SAFARI DEBUG: Persona=${hasPersona ? 'YES' : 'NO'} | Status=${roomState?.room.status || 'unknown'}`;
-      debugDiv.style.display = 'block';
-    }
-  }, [personaData, roomState]);
-
   return (
     <div className="room-page">
       <Logo onLeaveRoom={handleLeaveRoom} />
-      <div 
-        id="safari-debug" 
-        style={{ 
-          position: 'fixed', 
-          top: '40px',
-          left: 0, 
-          right: 0,
-          background: 'lime', 
-          padding: '10px', 
-          zIndex: 99999, 
-          fontSize: '14px',
-          fontWeight: 'bold',
-          border: '3px solid blue',
-          display: 'block'
-        }}
-      >
-        REACT DEBUG: Persona={personaData ? 'YES' : 'NO'} | Status={roomState?.room.status || 'unknown'}
-      </div>
-      <div className="room-content" style={{ marginTop: '100px' }}>
+      <div className="room-content">
         <h1 className="room-title">Room</h1>
         
         <div className="passphrase-section">
@@ -433,66 +288,51 @@ export function Room() {
           </div>
         )}
 
-        {roomState.room.status === 'active' && (() => {
-          // Compute persona directly in render - Safari might have issues with useMemo
-          const room = roomState.room as any;
-          const personaNumber = room.swiper_persona_number || room.swiperPersonaNumber;
-          const personaName = room.swiper_persona_name || room.swiperPersonaName;
-          const personaTagline = room.swiper_persona_tagline || room.swiperPersonaTagline;
-          const hasPersona = !!(personaNumber && personaName && personaTagline);
-          
-          console.warn('DIRECT RENDER CHECK:', {
-            personaNumber,
-            personaName,
-            personaTagline,
-            hasPersona,
-            allKeys: Object.keys(room),
-          });
-          
-          return (
-            <div className="game-status-section">
-              <p className="game-active-message">🎮 Game is in progress!</p>
-              {hasPersona ? (
-                <div className="swiper-persona-card" data-testid="swiper-persona-card" style={{ border: '5px solid green' }}>
-                  <p className="swiper-persona-label">Swiper's Persona:</p>
-                  <div className="swiper-persona-content">
-                    <img
-                      src={getPersonaImagePath(
-                        String(personaNumber),
-                        String(personaName)
-                      )}
-                      alt={String(personaName)}
-                      className="swiper-persona-image"
-                      onError={(e) => {
-                        console.error('Persona image failed to load!');
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                      onLoad={() => {
-                        console.warn('Persona image loaded!');
-                      }}
-                    />
-                    <p className="swiper-persona-name">{String(personaName)}</p>
-                    <p className="swiper-persona-tagline">"{String(personaTagline)}"</p>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ padding: '20px', background: '#ffcccc', margin: '20px 0', border: '5px solid red', fontSize: '18px', fontWeight: 'bold' }}>
-                  DEBUG: No persona. Number={String(personaNumber)} Name={String(personaName)} Tagline={String(personaTagline)}
-                </div>
-              )}
-              {playerRole && (
-                <div className="role-display">
-                  <p className="role-label">Your Role:</p>
-                  <p className={`role-value role-${playerRole}`}>
-                    {playerRole === 'swiper' && '👤 Swiper'}
-                    {playerRole === 'swipefish' && '🐟 Swipefish'}
-                    {playerRole === 'match' && '💘 Match'}
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        {roomState.room.status === 'active' && (
+          <div className="game-status-section">
+            <p className="game-active-message">🎮 Game is in progress!</p>
+            {(() => {
+              const room = roomState.room as any;
+              const personaNumber = room?.swiper_persona_number;
+              const personaName = room?.swiper_persona_name;
+              const personaTagline = room?.swiper_persona_tagline;
+              const hasPersona = !!(personaNumber && personaName && personaTagline);
+              
+              return (
+                <>
+                  {hasPersona && (
+                    <div className="swiper-persona-card" data-testid="swiper-persona-card">
+                      <p className="swiper-persona-label">Swiper's Persona:</p>
+                      <div className="swiper-persona-content">
+                        <img
+                          src={getPersonaImagePath(String(personaNumber), String(personaName))}
+                          alt={String(personaName)}
+                          className="swiper-persona-image"
+                          onError={(e) => {
+                            console.error('Persona image failed to load:', e);
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                        <p className="swiper-persona-name">{String(personaName)}</p>
+                        <p className="swiper-persona-tagline">"{String(personaTagline)}"</p>
+                      </div>
+                    </div>
+                  )}
+                  {playerRole && (
+                    <div className="role-display">
+                      <p className="role-label">Your Role:</p>
+                      <p className={`role-value role-${playerRole}`}>
+                        {playerRole === 'swiper' && '👤 Swiper'}
+                        {playerRole === 'swipefish' && '🐟 Swipefish'}
+                        {playerRole === 'match' && '💘 Match'}
+                      </p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        )}
         
         <div className="room-actions">
           {roomState.room.status === 'waiting' && (

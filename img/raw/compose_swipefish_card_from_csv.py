@@ -9,15 +9,15 @@ from pathlib import Path
 
 # ------------- CONFIG -------------
 
-# CSV with your personas (relative to script location)
+# CSV with your roles (relative to script location)
 SCRIPT_DIR = Path(__file__).parent
-CSV_PATH = SCRIPT_DIR.parent / "personas" / "swipefish_personas.csv"
+CSV_PATH = SCRIPT_DIR.parent / "roles" / "swipefish_roles.csv"
 
 # Blank template (white rounded card, transparent outside, 1080 x 1920)
 TEMPLATE_PATH = SCRIPT_DIR / "swipefish_blank_template_1080x1920.png"
 
-# Output directory (img/personas/)
-OUTPUT_DIR = SCRIPT_DIR.parent / "personas"
+# Output directory (img/roles/)
+OUTPUT_DIR = SCRIPT_DIR.parent / "roles"
 
 # Canvas / layout
 CANVAS_WIDTH = 1080
@@ -130,13 +130,13 @@ def load_font(path, size, fallback_bold=False):
 
 
 def lookup_role_from_csv(csv_path, role_number):
-    """Return (persona_title, tagline) for a given Persona Number from the CSV."""
+    """Return (role_title, tagline) for a given Role Number from the CSV."""
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            if row.get("Persona Number") == role_number:
-                return row.get("Persona", "").strip(), row.get("Tagline", "").strip()
-    raise ValueError(f"Persona Number {role_number} not found in {csv_path}")
+            if row.get("Role Number") == role_number:
+                return row.get("Role", "").strip(), row.get("Tagline", "").strip()
+    raise ValueError(f"Role Number {role_number} not found in {csv_path}")
 
 
 def compose_card(
@@ -219,7 +219,7 @@ def compose_card(
     # Note: textbbox includes extra space, so we use the baseline position instead
     # The bbox[3] (bottom) includes descenders and extra space, so we'll use a smaller value
     # Try using just the text height without the extra padding
-    gap_between_title_and_image = 30  # 30px spacing between role title and image
+    gap_between_title_and_image = -75  # Doubled the gap (less overlap) to increase spacing
     # Use title_y + actual_text_height (th) but subtract extra space
     # textbbox often includes ~20-30% extra space, so we'll compensate
     illus_top = title_y + int(th * 0.85) + gap_between_title_and_image
@@ -272,7 +272,7 @@ def compose_card(
     total_height = sum(line_heights) + (len(lines) - 1) * 12
 
     # Gap between image and tagline - reduced for tighter spacing
-    gap_between_image_and_tagline = gap_between_title_and_image - 200  # 30px - 200px = -170px for tighter spacing
+    gap_between_image_and_tagline = gap_between_title_and_image - 50  # Same as title-to-image gap (-75px) - 50px = -125px for tighter spacing
     
     # Calculate bottom padding - reduced to give more space for tagline
     # Top padding is where title_y starts (400px)
@@ -320,23 +320,23 @@ def compose_card(
 # ------------- MAIN -------------
 
 def find_role_images(directory):
-    """Find all PNG files matching P###.png pattern in the given directory."""
+    """Find all PNG files matching R###.png pattern in the given directory."""
     # Convert Path to string for glob
     dir_str = str(directory) if isinstance(directory, Path) else directory
-    pattern = os.path.join(dir_str, "P*.png")
+    pattern = os.path.join(dir_str, "R*.png")
     files = glob.glob(pattern)
     role_images = []
     
-    # Extract persona numbers from filenames (e.g., P001.png -> P001)
-    persona_pattern = re.compile(r'P(\d+)\.png$', re.IGNORECASE)
+    # Extract role numbers from filenames (e.g., R001.png -> R001)
+    role_pattern = re.compile(r'R(\d+)\.png$', re.IGNORECASE)
     for file in files:
         filename = os.path.basename(file)
-        match = persona_pattern.search(filename)
+        match = role_pattern.search(filename)
         if match:
-            persona_number = f"P{match.group(1).zfill(3)}"  # Ensure 3 digits
-            role_images.append((persona_number, file))
+            role_number = f"R{match.group(1).zfill(3)}"  # Ensure 3 digits
+            role_images.append((role_number, file))
     
-    return sorted(role_images)  # Sort by persona number
+    return sorted(role_images)  # Sort by role number
 
 
 if __name__ == "__main__":
@@ -348,34 +348,34 @@ if __name__ == "__main__":
     role_images = find_role_images(SCRIPT_DIR)
     
     if not role_images:
-        print("No persona images found (P###.png pattern)")
+        print("No role images found (R###.png pattern)")
         exit(1)
     
-    print(f"Found {len(role_images)} persona image(s) to process\n")
+    print(f"Found {len(role_images)} role image(s) to process\n")
     
     # Process each image
-    for persona_number, illustration_path in role_images:
+    for role_number, illustration_path in role_images:
         try:
-            # Look up persona + tagline from CSV
-            persona_title, tagline = lookup_role_from_csv(str(CSV_PATH), persona_number)
-            print(f"Processing {persona_number}: {persona_title} — {tagline}")
+            # Look up role + tagline from CSV
+            role_title, tagline = lookup_role_from_csv(str(CSV_PATH), role_number)
+            print(f"Processing {role_number}: {role_title} — {tagline}")
             
             if not os.path.exists(illustration_path):
                 print(f"  Warning: Illustration not found at {illustration_path}, skipping...")
                 continue
             
-            # Generate output filename: P001_Crypto_Bro.png
+            # Generate output filename: R001_Crypto_Bro.png
             # Replace spaces and other problematic characters with underscores
-            persona_title_safe = re.sub(r'[^\w\s-]', '', persona_title)  # Remove special chars
-            persona_title_safe = re.sub(r'[\s-]+', '_', persona_title_safe)  # Replace spaces/hyphens with underscore
-            persona_title_safe = persona_title_safe.strip('_')  # Remove leading/trailing underscores
-            output_filename = f"{persona_number}_{persona_title_safe}.png"
+            role_title_safe = re.sub(r'[^\w\s-]', '', role_title)  # Remove special chars
+            role_title_safe = re.sub(r'[\s-]+', '_', role_title_safe)  # Replace spaces/hyphens with underscore
+            role_title_safe = role_title_safe.strip('_')  # Remove leading/trailing underscores
+            output_filename = f"{role_number}_{role_title_safe}.png"
             output_path = OUTPUT_DIR / output_filename
             
             compose_card(
                 template_path=str(TEMPLATE_PATH),
                 illustration_path=illustration_path,
-                role_title=persona_title,
+                role_title=role_title,
                 tagline=tagline,
                 output_path=str(output_path),
             )
@@ -384,6 +384,6 @@ if __name__ == "__main__":
         except ValueError as e:
             print(f"  Error: {e}, skipping...\n")
         except Exception as e:
-            print(f"  Error processing {persona_number}: {e}, skipping...\n")
+            print(f"  Error processing {role_number}: {e}, skipping...\n")
     
     print("Done!")

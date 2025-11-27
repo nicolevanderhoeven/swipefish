@@ -144,56 +144,6 @@
   font-weight: 600;
 }
 
-.swiper-persona-card {
-  margin: 1rem 0;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 8px;
-  color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.swiper-persona-label {
-  margin: 0 0 0.75rem 0;
-  font-size: 0.9rem;
-  font-weight: 500;
-  opacity: 0.9;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.swiper-persona-content {
-  margin-top: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.swiper-persona-image {
-  width: 100%;
-  max-width: 300px;
-  height: auto;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  object-fit: contain;
-}
-
-.swiper-persona-name {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.swiper-persona-tagline {
-  margin: 0;
-  font-size: 1rem;
-  font-style: italic;
-  opacity: 0.95;
-  line-height: 1.5;
-}
-
 .role-display {
   margin-top: 1rem;
   padding: 1rem;
@@ -226,6 +176,53 @@
 
 .role-match {
   color: #ec4899;
+}
+
+.swiper-persona-card {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #667eea;
+}
+
+.swiper-persona-label {
+  margin: 0 0 1rem 0;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.swiper-persona-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.swiper-persona-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.swiper-persona-name {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+}
+
+.swiper-persona-tagline {
+  margin: 0;
+  font-size: 1rem;
+  font-style: italic;
+  color: #666;
+  text-align: center;
 }
 
 .start-game-button {

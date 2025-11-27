@@ -4,16 +4,14 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files
-COPY backend/package*.json ./
-COPY backend/tsconfig.json ./
+COPY package*.json ./
+COPY tsconfig.json ./
 
 # Install dependencies
 RUN npm ci
 
 # Copy source code
-COPY backend/src/ ./src/
-# Copy personas CSV file (needed at runtime)
-COPY img/personas/ ./img/personas/
+COPY src/ ./src/
 
 # Build TypeScript
 RUN npm run build
@@ -24,15 +22,13 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Copy package files
-COPY backend/package*.json ./
+COPY package*.json ./
 
 # Install production dependencies only
 RUN npm ci --only=production
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
-# Copy personas CSV file (needed at runtime)
-COPY --from=builder /app/img ./img
 
 # Expose port
 EXPOSE 3000
@@ -43,3 +39,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Start server
 CMD ["node", "dist/server.js"]
+

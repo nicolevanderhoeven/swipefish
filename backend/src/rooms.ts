@@ -13,9 +13,7 @@ import {
   updateRoomStatus,
   updatePlayerRole,
   clearPlayerRolesInRoom,
-  updateSwiperPersona,
 } from './db';
-import { selectRandomPersona } from './personas';
 import { generatePassphrase } from './passphrase';
 import { RoomState, GameStartedEvent, PlayerRole, RoleAssignmentEvent } from './types';
 
@@ -681,14 +679,6 @@ export function initializeRoomHandlers(io: Server): void {
           })),
         };
 
-        // Debug: Log what we're sending in room-state-sync
-        console.log('DEBUG: room-state-sync - Persona fields:', {
-          personaNumber: formattedRoomState.room.swiper_persona_number,
-          personaName: formattedRoomState.room.swiper_persona_name,
-          personaTagline: formattedRoomState.room.swiper_persona_tagline,
-          allRoomKeys: Object.keys(formattedRoomState.room),
-        });
-
         // Send current room state to requesting socket
         socket.emit('room-state-sync', {
           success: true,
@@ -880,16 +870,6 @@ export function initializeRoomHandlers(io: Server): void {
         await updateRoomStatus(roomId, 'active');
         logWithTrace('info', 'Updated room status to active', { roomId });
 
-        // Select and store a random persona card for the Swiper
-        const selectedPersona = selectRandomPersona();
-        await updateSwiperPersona(roomId, selectedPersona.personaNumber, selectedPersona.persona, selectedPersona.tagline);
-        logWithTrace('info', 'Selected and stored Swiper persona card', {
-          roomId,
-          personaNumber: selectedPersona.personaNumber,
-          persona: selectedPersona.persona,
-          tagline: selectedPersona.tagline,
-        });
-
         // Fetch fresh room state after update
         const updatedRoomState = await getRoomWithPlayers(roomId);
         
@@ -903,15 +883,6 @@ export function initializeRoomHandlers(io: Server): void {
           span.end();
           return;
         }
-
-        // Debug: Log persona data to verify it's being retrieved
-        logWithTrace('info', 'Room state after persona update', {
-          roomId,
-          personaNumber: updatedRoomState.room.swiper_persona_number,
-          personaName: updatedRoomState.room.swiper_persona_name,
-          personaTagline: updatedRoomState.room.swiper_persona_tagline,
-          allRoomFields: Object.keys(updatedRoomState.room),
-        });
 
         // Update in-memory cache
         activeRooms.set(roomId, updatedRoomState);
@@ -931,22 +902,6 @@ export function initializeRoomHandlers(io: Server): void {
               : (p.joined_at as any),
           })),
         };
-
-        // Debug: Log the actual room object being sent
-        console.log('DEBUG: formattedRoomState.room:', JSON.stringify(formattedRoomState.room, null, 2));
-        console.log('DEBUG: Persona fields:', {
-          personaNumber: formattedRoomState.room.swiper_persona_number,
-          personaName: formattedRoomState.room.swiper_persona_name,
-          personaTagline: formattedRoomState.room.swiper_persona_tagline,
-        });
-
-        // Debug: Log formatted room state to verify persona data is included
-        logWithTrace('info', 'Formatted room state for game-started event', {
-          roomId,
-          personaNumber: formattedRoomState.room.swiper_persona_number,
-          personaName: formattedRoomState.room.swiper_persona_name,
-          personaTagline: formattedRoomState.room.swiper_persona_tagline,
-        });
 
         // Ensure all players' sockets are in the room before broadcasting
         const socketsInRoom = await io.in(roomId).fetchSockets();

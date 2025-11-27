@@ -57,10 +57,7 @@ export async function createTables(): Promise<void> {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       passphrase VARCHAR(255) UNIQUE NOT NULL,
       created_at TIMESTAMP DEFAULT NOW(),
-      status VARCHAR(50) DEFAULT 'waiting',
-      swiper_persona_number VARCHAR(10),
-      swiper_persona_name VARCHAR(255),
-      swiper_persona_tagline TEXT
+      status VARCHAR(50) DEFAULT 'waiting'
     )
   `);
 
@@ -89,52 +86,6 @@ export async function createTables(): Promise<void> {
   await dbPool.query(`
     CREATE INDEX IF NOT EXISTS idx_rooms_passphrase ON rooms(passphrase)
   `);
-
-  // Add swiper persona columns if they don't exist (for existing databases)
-  await dbPool.query(`
-    ALTER TABLE rooms 
-    ADD COLUMN IF NOT EXISTS swiper_persona_number VARCHAR(10)
-  `);
-
-  await dbPool.query(`
-    ALTER TABLE rooms 
-    ADD COLUMN IF NOT EXISTS swiper_persona_name VARCHAR(255)
-  `);
-
-  await dbPool.query(`
-    ALTER TABLE rooms 
-    ADD COLUMN IF NOT EXISTS swiper_persona_tagline TEXT
-  `);
-
-  // Migration: Copy data from old swiper_role_* columns to new swiper_persona_* columns if they exist
-  // This handles the transition from "role" to "persona" naming
-  try {
-    // Check if old columns exist by trying to select from them
-    const checkOldColumns = await dbPool.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'rooms' 
-        AND column_name IN ('swiper_role_number', 'swiper_role_name', 'swiper_role_tagline')
-    `);
-    
-    if (checkOldColumns.rows.length > 0) {
-      // Old columns exist, migrate data
-      const migrationResult = await dbPool.query(`
-        UPDATE rooms 
-        SET swiper_persona_number = swiper_role_number,
-            swiper_persona_name = swiper_role_name,
-            swiper_persona_tagline = swiper_role_tagline
-        WHERE (swiper_persona_number IS NULL OR swiper_persona_name IS NULL OR swiper_persona_tagline IS NULL)
-          AND (swiper_role_number IS NOT NULL OR swiper_role_name IS NOT NULL OR swiper_role_tagline IS NOT NULL)
-      `);
-      console.log(`Migration: Migrated ${migrationResult.rowCount} rooms from swiper_role_* to swiper_persona_*`);
-    } else {
-      console.log('Migration: Old swiper_role_* columns not found, skipping migration');
-    }
-  } catch (error) {
-    // Ignore errors if old columns don't exist (fresh database)
-    console.log('Migration: Error checking for old columns, skipping migration:', error);
-  }
 }
 
 export async function createRoom(passphrase: string): Promise<Room> {
@@ -233,18 +184,8 @@ export async function removePlayer(socketId: string): Promise<void> {
 export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; players: Player[] } | null> {
   const dbPool = ensurePoolInitialized();
 
-  // Explicitly select all columns including persona fields to ensure they're included
-  // Don't use Room type here - let PostgreSQL return the raw data
-  const roomResult = await dbPool.query(
-    `SELECT 
-      id, 
-      passphrase, 
-      created_at, 
-      status, 
-      swiper_persona_number, 
-      swiper_persona_name, 
-      swiper_persona_tagline 
-    FROM rooms WHERE id = $1`,
+  const roomResult = await dbPool.query<Room>(
+    'SELECT * FROM rooms WHERE id = $1',
     [roomId]
   );
 
@@ -252,32 +193,8 @@ export async function getRoomWithPlayers(roomId: string): Promise<{ room: Room; 
 
   const players = await getPlayersInRoom(roomId);
 
-  const rawRoom = roomResult.rows[0];
-  
-  // Debug: Log what we're getting from the database
-  console.log('DEBUG: getRoomWithPlayers - Raw room from DB:', JSON.stringify(rawRoom, null, 2));
-  console.log('DEBUG: getRoomWithPlayers - Persona fields:', {
-    personaNumber: rawRoom.swiper_persona_number,
-    personaName: rawRoom.swiper_persona_name,
-    personaTagline: rawRoom.swiper_persona_tagline,
-    allKeys: Object.keys(rawRoom),
-  });
-  
-  // Map to Room type explicitly
-  const room: Room = {
-    id: rawRoom.id,
-    passphrase: rawRoom.passphrase,
-    created_at: rawRoom.created_at,
-    status: rawRoom.status,
-    swiper_persona_number: rawRoom.swiper_persona_number,
-    swiper_persona_name: rawRoom.swiper_persona_name,
-    swiper_persona_tagline: rawRoom.swiper_persona_tagline,
-  };
-  
-  console.log('DEBUG: getRoomWithPlayers - Mapped room:', JSON.stringify(room, null, 2));
-
   return {
-    room,
+    room: roomResult.rows[0],
     players,
   };
 }
@@ -307,23 +224,6 @@ export async function clearPlayerRolesInRoom(roomId: string): Promise<void> {
     'UPDATE players SET role = NULL WHERE room_id = $1',
     [roomId]
   );
-}
-
-export async function updateSwiperPersona(roomId: string, personaNumber: string, personaName: string, personaTagline: string): Promise<void> {
-  const dbPool = ensurePoolInitialized();
-
-  console.log('DEBUG: updateSwiperPersona called with:', { roomId, personaNumber, personaName, personaTagline });
-
-  const result = await dbPool.query(
-    'UPDATE rooms SET swiper_persona_number = $1, swiper_persona_name = $2, swiper_persona_tagline = $3 WHERE id = $4 RETURNING swiper_persona_number, swiper_persona_name, swiper_persona_tagline',
-    [personaNumber, personaName, personaTagline, roomId]
-  );
-
-  console.log('DEBUG: updateSwiperPersona result:', result.rows[0]);
-  
-  if (result.rowCount === 0) {
-    console.error('ERROR: updateSwiperPersona - No rows updated for roomId:', roomId);
-  }
 }
 
 export async function cleanupEmptyRooms(): Promise<void> {
