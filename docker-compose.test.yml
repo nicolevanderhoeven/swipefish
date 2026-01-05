@@ -1,0 +1,19 @@
+services:
+  backend:
+    ports:
+      - "0:3000"
+  frontend:
+    ports:
+      - "0:80"
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder
+    command: npm run type-check
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: builder
+    command: npm run type-check

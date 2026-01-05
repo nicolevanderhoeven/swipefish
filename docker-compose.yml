@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: swipefish
+      POSTGRES_PASSWORD: swipefish
+      POSTGRES_DB: swipefish
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker-initdb.d:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swipefish -d swipefish"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://swipefish:swipefish@postgres:5432/swipefish
+      NODE_ENV: production
+      CORS_ORIGIN: "*"
+      PORT: "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - ./img/personas/swipefish_personas.csv:/app/img/personas/swipefish_personas.csv:ro
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_SOCKET_URL: ws://localhost:3000
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+
+volumes:
+  pgdata:

@@ -30,6 +30,12 @@ RUN npm ci --only=production
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
+# Test scripts
+COPY test/ ./test/
+
+# Ensure persona mount path exists
+RUN mkdir -p /app/img/personas
+
 # Expose port
 EXPOSE 3000
 
