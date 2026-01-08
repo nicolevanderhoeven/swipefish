@@ -1,0 +1,171 @@
+<div id="cardtable-app" class="min-h-screen bg-slate-950 text-slate-100">
+  <div class="mx-auto max-w-6xl px-4 py-6">
+    <div id="lobby" class="space-y-6">
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+        <h1 class="text-2xl font-semibold">Cardtable</h1>
+        <p class="mt-2 text-sm text-slate-400">
+          Create or join a game. Multiple tabs join as separate players.
+        </p>
+        <div class="mt-6 grid gap-4 md:grid-cols-[1fr_1fr_auto]">
+          <div class="space-y-2">
+            <label class="text-xs uppercase tracking-wide text-slate-400" for="player-name">
+              Player name
+            </label>
+            <input
+              id="player-name"
+              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+              placeholder="Leave blank for auto-name"
+              type="text"
+            />
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs uppercase tracking-wide text-slate-400" for="game-code">
+              Game code
+            </label>
+            <input
+              id="game-code"
+              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+              placeholder="ABCD"
+              type="text"
+            />
+          </div>
+          <div class="flex items-end gap-2">
+            <button
+              id="create-game"
+              class="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold text-white"
+              type="button"
+            >
+              New game
+            </button>
+            <button
+              id="join-game"
+              class="rounded-lg border border-indigo-400/60 px-4 py-2 text-sm font-semibold text-indigo-200"
+              type="button"
+            >
+              Join
+            </button>
+          </div>
+        </div>
+        <div id="status" class="mt-4 text-sm text-slate-400"></div>
+      </div>
+    </div>
+
+    <div id="game" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-semibold">Live table</h2>
+          <p class="text-sm text-slate-400">Drag and drop coming soon. Use the buttons for now.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            id="toggle-sidebar"
+            class="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200"
+            type="button"
+          >
+            Game menu
+          </button>
+          <button
+            id="restart-game"
+            class="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200"
+            type="button"
+          >
+            New draw deck
+          </button>
+          <button
+            id="shuffle-discard"
+            class="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200"
+            type="button"
+          >
+            Shuffle discard into deck
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+        <span>Share link:</span>
+        <a id="game-link" class="break-all text-emerald-200 underline" href="#"></a>
+        <button id="copy-game-link" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200" type="button">
+          Copy
+        </button>
+      </div>
+
+      <div id="sidebar-overlay" class="sidebar-overlay"></div>
+      <div id="game-layout" class="game-layout">
+        <div id="game-sidebar" class="game-sidebar">
+          <div class="flex items-center justify-between">
+            <div class="text-xs uppercase tracking-wide text-slate-400">Game menu</div>
+            <button id="close-sidebar" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200" type="button">
+              Close
+            </button>
+          </div>
+          <div class="mt-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-400">Players</div>
+            <div id="players" class="mt-3 space-y-2 text-sm"></div>
+          </div>
+          <div class="mt-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-400">Deck setup</div>
+            <div class="mt-3 space-y-3 text-sm">
+              <label class="block">
+                <span class="text-xs text-slate-400">Card deck</span>
+                <select id="deck-select" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2">
+                </select>
+              </label>
+              <label class="block">
+                <span class="text-xs text-slate-400">Quirk deck</span>
+                <select id="quirk-select" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2">
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-4 game-main">
+          <div id="players-compact" class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4"></div>
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+            <div class="flex items-center justify-between text-sm text-slate-300">
+              <span>Deck</span>
+              <span>Cards left: <span id="deck-count">0</span></span>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button id="draw-card" class="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950" type="button">
+                Draw to hand
+              </button>
+              <button id="draw-to-table" class="rounded-lg border border-emerald-400/60 px-3 py-2 text-sm text-emerald-100" type="button">
+                Draw to table
+              </button>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-400">Table</div>
+            <div id="table" class="mt-4"></div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-400">Discard (top)</div>
+            <button
+              id="discard-card"
+              class="discard-card mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-6 text-sm text-slate-200"
+              type="button"
+            >
+              Empty
+            </button>
+            <div class="mt-3 flex flex-wrap gap-2 text-xs">
+              <button id="discard-to-hand" class="rounded-lg border border-slate-600 px-3 py-2 text-slate-200" type="button">
+                To hand
+              </button>
+              <button id="discard-to-table" class="rounded-lg border border-slate-600 px-3 py-2 text-slate-200" type="button">
+                To table
+              </button>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-400">Your hand</div>
+            <div id="hand" class="mt-4"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

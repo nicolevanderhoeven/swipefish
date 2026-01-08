@@ -11,14 +11,16 @@ Architecture
 - Phoenix app provides a websocket (Channels) topic per game: game:<code>.
 - SPA client connects over websocket and renders state JSON.
 - Game state is in memory (no database) using a GenServer per game.
-- Player rejoin uses a player token stored in localStorage.
+- Player rejoin uses a per-tab session token stored in sessionStorage.
+- Games can be shared via URL param `?game=<CODE>`.
 
 SPA Client
 - Single-page web app that renders the table, deck, discard, and hands from server state.
-- Receives public and private state updates over websocket and applies animations locally.
+- Receives public and private state updates over websocket.
 - Sends player intents (draw, move, flip, etc.) to the server; server remains authoritative.
 - Frontend uses Phoenix asset pipeline with esbuild (no extra bundler).
-- Plain TypeScript + three.js for rendering; minimal third-party dependencies.
+- Plain TypeScript for rendering; minimal third-party dependencies.
+- Players can update their display name in-game.
 
 State Model
 - Zones own cards: deck, table, discard, hands.<player_id>.
@@ -38,7 +40,7 @@ Local Dev via Make + Docker
 - make test-integration: run integration tests in an isolated docker-compose project.
 
 Notes
-- Deck sets are chosen by deck directory name (including standard-52).
-- Quirks are optional; games can run without quirks.
+- Deck sets are chosen by deck directory name (default swipefish + swipefish-quirks, standard-52 available).
+- Quirks are optional; leaving the quirk deck empty disables them.
 - Card schema supports title, body, and image; at least one field required.
 - Deck files live under static/decks/cards/<deck>/deck.json and static/decks/quirks/<deck>/deck.json.

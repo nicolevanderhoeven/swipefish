@@ -1,0 +1,6 @@
+services:
+  app:
+    volumes: []
+    environment:
+      MIX_ENV: test
+      SKIP_ASSETS: ${SKIP_ASSETS:-1}

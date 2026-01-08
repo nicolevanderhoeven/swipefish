@@ -5,7 +5,7 @@ Core concept
 - No turns or restrictions; unlimited players.
 - Decks defined by JSON (card deck + optional quirk deck).
 - Quirks are optional; a game can be started with cards only.
-- Standard 52-card play is supported via a built-in standard-52 deck with art.
+- Default deck is swipefish + swipefish-quirks; standard-52 is also available.
 - When quirks are used, each card is permanently paired with a random quirk at game start.
 
 Zones
@@ -33,10 +33,11 @@ Deck lifecycle
 - Shuffle Discard into Deck is always available to any player.
 
 Session flow
-- Lobby: create or join a game (code).
-- Reloading the page does not leave the game.
+- Lobby: create or join a game (code), or use a shareable game URL.
+- Reloading the page keeps you in the same game (per-tab session).
 - Any player can restart the game; players stay in the same game.
 - Multiple tabs join as new players.
+- Players can update their display name in-game.
 
 Card definition
 - Cards use title, body, and image fields.
