@@ -24,6 +24,11 @@ defmodule CardtableWeb.Router do
   # scope "/api", CardtableWeb do
   #   pipe_through :api
   # end
+  scope "/api", CardtableWeb do
+    pipe_through :api
+
+    post "/layout", LayoutController, :update
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:cardtable, :dev_routes) do

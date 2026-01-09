@@ -1,213 +1,213 @@
 {
-  "back_image": "/decks/cards/standard-52/img/back.svg",
+  "back_image": "img/back.svg",
   "cards": [
     {
       "title": "A\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/AS.svg"
+      "image": "img/AS.svg"
     },
     {
       "title": "2\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/2S.svg"
+      "image": "img/2S.svg"
     },
     {
       "title": "3\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/3S.svg"
+      "image": "img/3S.svg"
     },
     {
       "title": "4\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/4S.svg"
+      "image": "img/4S.svg"
     },
     {
       "title": "5\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/5S.svg"
+      "image": "img/5S.svg"
     },
     {
       "title": "6\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/6S.svg"
+      "image": "img/6S.svg"
     },
     {
       "title": "7\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/7S.svg"
+      "image": "img/7S.svg"
     },
     {
       "title": "8\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/8S.svg"
+      "image": "img/8S.svg"
     },
     {
       "title": "9\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/9S.svg"
+      "image": "img/9S.svg"
     },
     {
       "title": "10\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/10S.svg"
+      "image": "img/10S.svg"
     },
     {
       "title": "J\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/JS.svg"
+      "image": "img/JS.svg"
     },
     {
       "title": "Q\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/QS.svg"
+      "image": "img/QS.svg"
     },
     {
       "title": "K\u2660\ufe0f",
-      "image": "/decks/cards/standard-52/img/KS.svg"
+      "image": "img/KS.svg"
     },
     {
       "title": "A\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/AH.svg"
+      "image": "img/AH.svg"
     },
     {
       "title": "2\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/2H.svg"
+      "image": "img/2H.svg"
     },
     {
       "title": "3\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/3H.svg"
+      "image": "img/3H.svg"
     },
     {
       "title": "4\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/4H.svg"
+      "image": "img/4H.svg"
     },
     {
       "title": "5\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/5H.svg"
+      "image": "img/5H.svg"
     },
     {
       "title": "6\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/6H.svg"
+      "image": "img/6H.svg"
     },
     {
       "title": "7\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/7H.svg"
+      "image": "img/7H.svg"
     },
     {
       "title": "8\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/8H.svg"
+      "image": "img/8H.svg"
     },
     {
       "title": "9\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/9H.svg"
+      "image": "img/9H.svg"
     },
     {
       "title": "10\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/10H.svg"
+      "image": "img/10H.svg"
     },
     {
       "title": "J\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/JH.svg"
+      "image": "img/JH.svg"
     },
     {
       "title": "Q\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/QH.svg"
+      "image": "img/QH.svg"
     },
     {
       "title": "K\u2665\ufe0f",
-      "image": "/decks/cards/standard-52/img/KH.svg"
+      "image": "img/KH.svg"
     },
     {
       "title": "A\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/AD.svg"
+      "image": "img/AD.svg"
     },
     {
       "title": "2\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/2D.svg"
+      "image": "img/2D.svg"
     },
     {
       "title": "3\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/3D.svg"
+      "image": "img/3D.svg"
     },
     {
       "title": "4\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/4D.svg"
+      "image": "img/4D.svg"
     },
     {
       "title": "5\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/5D.svg"
+      "image": "img/5D.svg"
     },
     {
       "title": "6\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/6D.svg"
+      "image": "img/6D.svg"
     },
     {
       "title": "7\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/7D.svg"
+      "image": "img/7D.svg"
     },
     {
       "title": "8\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/8D.svg"
+      "image": "img/8D.svg"
     },
     {
       "title": "9\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/9D.svg"
+      "image": "img/9D.svg"
     },
     {
       "title": "10\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/10D.svg"
+      "image": "img/10D.svg"
     },
     {
       "title": "J\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/JD.svg"
+      "image": "img/JD.svg"
     },
     {
       "title": "Q\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/QD.svg"
+      "image": "img/QD.svg"
     },
     {
       "title": "K\u2666\ufe0f",
-      "image": "/decks/cards/standard-52/img/KD.svg"
+      "image": "img/KD.svg"
     },
     {
       "title": "A\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/AC.svg"
+      "image": "img/AC.svg"
     },
     {
       "title": "2\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/2C.svg"
+      "image": "img/2C.svg"
     },
     {
       "title": "3\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/3C.svg"
+      "image": "img/3C.svg"
     },
     {
       "title": "4\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/4C.svg"
+      "image": "img/4C.svg"
     },
     {
       "title": "5\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/5C.svg"
+      "image": "img/5C.svg"
     },
     {
       "title": "6\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/6C.svg"
+      "image": "img/6C.svg"
     },
     {
       "title": "7\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/7C.svg"
+      "image": "img/7C.svg"
     },
     {
       "title": "8\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/8C.svg"
+      "image": "img/8C.svg"
     },
     {
       "title": "9\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/9C.svg"
+      "image": "img/9C.svg"
     },
     {
       "title": "10\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/10C.svg"
+      "image": "img/10C.svg"
     },
     {
       "title": "J\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/JC.svg"
+      "image": "img/JC.svg"
     },
     {
       "title": "Q\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/QC.svg"
+      "image": "img/QC.svg"
     },
     {
       "title": "K\u2663\ufe0f",
-      "image": "/decks/cards/standard-52/img/KC.svg"
+      "image": "img/KC.svg"
     }
   ]
 }

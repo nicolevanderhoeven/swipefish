@@ -11,6 +11,15 @@ defmodule CardtableWeb.Layouts do
   # and other static content.
   embed_templates "layouts/*"
 
+  def layout_css_version do
+    path = Path.join([:code.priv_dir(:cardtable), "static", "layout.css"])
+
+    case File.stat(path) do
+      {:ok, stat} -> :calendar.datetime_to_gregorian_seconds(stat.mtime)
+      {:error, _} -> System.system_time(:second)
+    end
+  end
+
   @doc """
   Renders your app layout.
 
