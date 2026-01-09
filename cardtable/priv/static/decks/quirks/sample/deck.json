@@ -3,22 +3,22 @@
     {
       "title": "Early Riser",
       "body": "Up before sunrise",
-      "image": "/decks/quirks/sample/img/early.svg"
+      "image": "img/early.svg"
     },
     {
       "title": "Night Owl",
       "body": "Loves late nights",
-      "image": "/decks/quirks/sample/img/night.svg"
+      "image": "img/night.svg"
     },
     {
       "title": "Vegetarian",
       "body": "Avoids meat",
-      "image": "/decks/quirks/sample/img/veg.svg"
+      "image": "img/veg.svg"
     },
     {
       "title": "Collector",
       "body": "Keeps odd treasures",
-      "image": "/decks/quirks/sample/img/collector.svg"
+      "image": "img/collector.svg"
     }
   ]
 }

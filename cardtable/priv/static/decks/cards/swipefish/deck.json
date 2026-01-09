@@ -1,161 +1,265 @@
 {
-  "back_image": "/decks/cards/swipefish/img/back.svg",
+  "back_image": "img/back.svg",
   "cards": [
     {
-      "image": "/decks/cards/swipefish/img/P001_Crypto_Bro.png"
+      "title": "Crypto Bro",
+      "body": "Here for love. Or funding. Preferably both.",
+      "image": "img/P001_Crypto_Bro.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P002_Life_Coach_At_23.png"
+      "title": "Life Coach at 23",
+      "body": "I help people find their purpose from my parents' basement.",
+      "image": "img/P002_Life_Coach_at_23.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P003_Digital_Nomad.png"
+      "title": "Digital Nomad",
+      "body": "Will ghost you from a different timezone.",
+      "image": "img/P003_Digital_Nomad.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P004_Plant_Parent.png"
+      "title": "Plant Parent",
+      "body": "Talk nicely to me or to my monstera; same result.",
+      "image": "img/P004_Plant_Parent.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P005_Gymfluencer.png"
+      "title": "Gymfluencer",
+      "body": "Swipe right if you love 4 a.m. alarms and whey protein burps.",
+      "image": "img/P005_Gymfluencer.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P006_I_Swear_Im_60_Guy.png"
+      "title": "I Swear I'm 6'0' Guy",
+      "body": "Actually 5'10 but standing on integrity.",
+      "image": "img/P006_I_Swear_Im_60_Guy.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P007_BookTok_Baddie.png"
+      "title": "BookTok Baddie",
+      "body": "Reads only enemies-to-lovers. Might apply it to you.",
+      "image": "img/P007_BookTok_Baddie.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P008_Dungeon_Master.png"
+      "title": "Dungeon Master",
+      "body": "Will absolutely monologue. Will not apologize.",
+      "image": "img/P008_Dungeon_Master.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P009_Verified_Traveler.png"
+      "title": "Verified Traveler",
+      "body": "All photos taken at Machu Picchu. No further questions.",
+      "image": "img/P009_Verified_Traveler.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P010_Pet_Parent.png"
+      "title": "Pet Parent",
+      "body": "I'm just here so my corgi can get brand deals.",
+      "image": "img/P010_Pet_Parent.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P011_Yoga_Instructor.png"
+      "title": "Yoga Instructor",
+      "body": "I'm flexible, but not about my boundaries.",
+      "image": "img/P011_Yoga_Instructor.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P012_Goth_Witch.png"
+      "title": "Goth Witch",
+      "body": "Burns sage\u2026 and bridges.",
+      "image": "img/P012_Goth_Witch.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P013_Algorithm_Addict.png"
+      "title": "Algorithm Addict",
+      "body": "Optimizing my profile more than my life.",
+      "image": "img/P013_Algorithm_Addict.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P014_Food_Photographer.png"
+      "title": "Food Photographer",
+      "body": "Meals must be lukewarm before eating.",
+      "image": "img/P014_Food_Photographer.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P015_Prepper.png"
+      "title": "Prepper",
+      "body": "Swipe right if you like bunkers and emotional distance.",
+      "image": "img/P015_Prepper.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P016_Praise_Princess.png"
+      "title": "Praise Princess",
+      "body": "I'm here for the compliments, not the commitment.",
+      "image": "img/P016_Praise_Princess.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P017_Star_Gazer.png"
+      "title": "Star Gazer",
+      "body": "If this date goes badly, I'm blaming the planets.",
+      "image": "img/P017_Star_Gazer.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P018_Sapiosexual.png"
+      "title": "Sapiosexual",
+      "body": "I'm attracted to intelligence, especially mine.",
+      "image": "img/P018_Sapiosexual.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P019_The_Angler.png"
+      "title": "The Angler",
+      "body": "Caught this fish. Still looking to catch feelings.",
+      "image": "img/P019_The_Angler.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P020_Denial_Queen.png"
+      "title": "Denial Queen",
+      "body": "Trying to rewrite my 20s by dating someone in theirs.",
+      "image": "img/P020_Denial_Queen.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P021_Bimbo.png"
+      "title": "Bimbo",
+      "body": "Wait\u2026 Canada's a country?",
+      "image": "img/P021_Bimbo.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P022_The_Polyamorist.png"
+      "title": "The Polyamorist",
+      "body": "Ethically insensitive. Free to be avoidant.",
+      "image": "img/P022_The_Polyamorist.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P023_Single_Parent.png"
+      "title": "Single Parent",
+      "body": "I'm only free when my kid's asleep.",
+      "image": "img/P023_Single_Parent.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P024_Digital_Pen_Pal.png"
+      "title": "Digital Pen Pal",
+      "body": "I'm here for long paragraphs and zero plans.",
+      "image": "img/P024_Digital_Pen_Pal.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P025_Finance_Guy.png"
+      "title": "Finance Guy",
+      "body": "Yes, I work in finance. No, I can't explain what I do.",
+      "image": "img/P025_Finance_Guy.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P026_Minimalist.png"
+      "title": "Minimalist",
+      "body": "I own 4 items. One is emotional baggage.",
+      "image": "img/P026_Minimalist.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P027_Workaholic.png"
+      "title": "Workaholic",
+      "body": "Available on weekends. Sometimes.",
+      "image": "img/P027_Workaholic.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P028_Death_Metalhead.png"
+      "title": "Death Metalhead",
+      "body": "Growls on stage, soft boi at heart.",
+      "image": "img/P028_Death_Metalhead.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P029_Podcast_Host.png"
+      "title": "Podcast Host",
+      "body": "Has a podcast no one asked for.",
+      "image": "img/P029_Podcast_Host.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P030_Mistress_of_Mischief.png"
+      "title": "Mistress of Mischief",
+      "body": "Swipe left without permission and we'll have words.",
+      "image": "img/P030_Mistress_of_Mischief.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P031_Car_Guy.png"
+      "title": "Car Guy",
+      "body": "My personality is Mazerati.",
+      "image": "img/P031_Car_Guy.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P032_Cosplayer.png"
+      "title": "Cosplayer",
+      "body": "I look different in every photo. Good luck.",
+      "image": "img/P032_Cosplayer.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P033_Gamer.png"
+      "title": "Gamer",
+      "body": "I promise I can pause\u2026 sometimes.",
+      "image": "img/P033_Gamer.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P034_Wine_Mom.png"
+      "title": "Wine Mom",
+      "body": "It's always ros\u00e9 o'clock somewhere.",
+      "image": "img/P034_Wine_Mom.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P035_Gravel_Goblin.png"
+      "title": "Gravel Goblin",
+      "body": "Eats dirt roads for breakfast. Needs someone to hold snacks.",
+      "image": "img/P035_Gravel_Goblin.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P036_Entrepreneur.png"
+      "title": "Entrepreneur",
+      "body": "Founder of three startups. All in stealth mode.",
+      "image": "img/P036_Entrepreneur.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P037_Conspiracy_Theorist.png"
+      "title": "Conspiracy Theorist",
+      "body": "Birds aren't real but our connection could be.",
+      "image": "img/P037_Conspiracy_Theorist.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P038_Hippie_Anarchist.png"
+      "title": "Hippie Anarchist",
+      "body": "Lives in a van. Smells like... freedom.",
+      "image": "img/P038_Hippie_Anarchist.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P039_Romantic.png"
+      "title": "Romantic",
+      "body": "Looking for love. With dramatic rain scenes.",
+      "image": "img/P039_Romantic.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P040_Geologist.png"
+      "title": "Geologist",
+      "body": "My rocks have names. Respect them.",
+      "image": "img/P040_Geologist.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P041_Freegan.png"
+      "title": "Freegan",
+      "body": "Will eat anything as long as it was free.",
+      "image": "img/P041_Freegan.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P042_NFT_Artist.png"
+      "title": "NFT Artist",
+      "body": "My art is intangible. My ego isn't.",
+      "image": "img/P042_NFT_Artist.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P043_Bluebeard.png"
+      "title": "Bluebeard",
+      "body": "I give great vows. Long-term results may vary.",
+      "image": "img/P043_Bluebeard.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P044_Renfairer.png"
+      "title": "Renfairer",
+      "body": "I court like it's 1487.",
+      "image": "img/P044_Renfairer.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P045_DIYer.png"
+      "title": "DIYer",
+      "body": "Everything is a project. Including you.",
+      "image": "img/P045_DIYer.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P046_Ex_Influencer.png"
+      "title": "Ex-Influencer",
+      "body": "Fame faded. Trauma stayed.",
+      "image": "img/P046_Ex_Influencer.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P047_Baker.png"
+      "title": "Baker",
+      "body": "Kneads love.",
+      "image": "img/P047_Baker.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P048_Potter.png"
+      "title": "Potter",
+      "body": "Wants to recreate the Ghost scene.",
+      "image": "img/P048_Potter.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P049_Runner.png"
+      "title": "Runner",
+      "body": "Runs from problems at record pace.",
+      "image": "img/P049_Runner.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P050_Streamer.png"
+      "title": "Streamer",
+      "body": "Mind if I stream this? My followers need to meet you in real time.",
+      "image": "img/P050_Streamer.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P051_Collector.png"
+      "title": "Collector",
+      "body": "I only date limited editions. Are you numbered?",
+      "image": "img/P051_Collector.png"
     },
     {
-      "image": "/decks/cards/swipefish/img/P052_Proudly_Extra.png"
+      "title": "Proudly Extra",
+      "body": "My personality comes in 64 colors. Try to keep up.",
+      "image": "img/P052_Proudly_Extra.png"
     }
   ]
 }

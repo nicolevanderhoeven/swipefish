@@ -2,8 +2,6 @@ services:
   app:
     build:
       context: .
-      args:
-        SKIP_ASSETS: ${SKIP_ASSETS:-0}
     ports:
       - "4000:4000"
     volumes:
@@ -12,7 +10,6 @@ services:
       - mix_build:/app/_build
     environment:
       MIX_ENV: dev
-      SKIP_ASSETS: ${SKIP_ASSETS:-0}
     command: mix phx.server
 
 volumes:

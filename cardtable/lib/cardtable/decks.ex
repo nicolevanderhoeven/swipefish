@@ -29,7 +29,7 @@ defmodule Cardtable.Decks do
 
     with {:ok, contents} <- File.read(path),
          {:ok, decoded} <- Jason.decode(contents),
-         {:ok, cards, back_image} <- normalize_cards(decoded) do
+         {:ok, cards, back_image} <- normalize_cards(decoded, type, name) do
       {:ok, %{cards: cards, back_image: back_image}}
     else
       {:error, reason} -> {:error, reason}
@@ -60,17 +60,20 @@ defmodule Cardtable.Decks do
   end
 
   # Normalizes a decoded deck JSON map into a list of valid cards.
-  defp normalize_cards(%{"cards" => cards} = decoded) when is_list(cards) do
+  defp normalize_cards(%{"cards" => cards} = decoded, type, name) when is_list(cards) do
     normalized =
       cards
       |> Enum.map(&normalize_card/1)
+      |> Enum.map(&resolve_card_image(&1, type, name))
       |> Enum.filter(&valid_card?/1)
 
-    {:ok, normalized, Map.get(decoded, "back_image")}
+    back_image = decoded |> Map.get("back_image") |> resolve_asset_path(type, name)
+
+    {:ok, normalized, back_image}
   end
 
   # Returns an error when the JSON structure does not contain cards.
-  defp normalize_cards(_), do: {:error, :invalid_deck}
+  defp normalize_cards(_, _type, _name), do: {:error, :invalid_deck}
 
   # Normalizes a card definition that includes title, body, and image.
   defp normalize_card(%{"title" => title, "body" => body, "image" => image}) do
@@ -117,4 +120,20 @@ defmodule Cardtable.Decks do
 
   # Returns false for invalid card shapes.
   defp valid_card?(_), do: false
+
+  # Ensures image paths are absolute to /decks when stored as relative.
+  defp resolve_card_image(%{image: image} = card, type, name) do
+    %{card | image: resolve_asset_path(image, type, name)}
+  end
+
+  defp resolve_card_image(card, _type, _name), do: card
+
+  # Builds a public path to the deck asset if stored as relative.
+  defp resolve_asset_path(nil, _type, _name), do: nil
+
+  defp resolve_asset_path("img/" <> _rest = path, type, name) do
+    "/decks/#{Atom.to_string(type)}/#{name}/#{path}"
+  end
+
+  defp resolve_asset_path(path, _type, _name), do: path
 end

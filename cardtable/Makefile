@@ -13,13 +13,13 @@ stop:
 test: test-quick test-integration
 
 test-build:
-	SKIP_ASSETS=1 $(COMPOSE_TEST) build
+	$(COMPOSE_TEST) build
 
 test-quick: test-build
-	SKIP_ASSETS=1 $(COMPOSE_TEST) run --rm -e SKIP_ASSETS=1 app mix test test/cardtable/game_test.exs
+	$(COMPOSE_TEST) run --rm app mix test test/cardtable/game_test.exs
 
 test-integration: test-build
-	SKIP_ASSETS=1 $(COMPOSE_TEST) run --rm -e SKIP_ASSETS=1 app mix test
+	$(COMPOSE_TEST) run --rm app mix test
 
 
 .PHONY: build start stop test test-build test-quick test-integration

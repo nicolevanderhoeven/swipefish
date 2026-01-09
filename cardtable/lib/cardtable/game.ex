@@ -171,6 +171,7 @@ defmodule Cardtable.Game do
       quirk_set: game.quirk_set,
       deck_back_image: game.deck_back_image,
       deck_count: length(game.deck),
+      discard_count: length(game.discard),
       discard_top: discard_top(game),
       table: table_state(game),
       players: player_state(game),

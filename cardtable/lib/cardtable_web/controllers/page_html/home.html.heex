@@ -117,52 +117,145 @@
               </label>
             </div>
           </div>
-        </div>
-
-        <div class="space-y-4 game-main">
-          <div id="players-compact" class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4"></div>
-          <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
-            <div class="flex items-center justify-between text-sm text-slate-300">
-              <span>Deck</span>
-              <span>Cards left: <span id="deck-count">0</span></span>
+          <div class="mt-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-400">Hand fan</div>
+            <div class="mt-3 space-y-3 text-xs text-slate-300">
+              <label class="block">
+                <span>Card height (R): <span id="card-height-r-value">0.28</span></span>
+                <input id="card-height-r" type="range" min="0.15" max="0.6" value="0.28" step="0.01" class="mt-2 w-full" />
+              </label>
+              <label class="block">
+                <span>Fan center (R): <span id="hand-center-r-value">0</span></span>
+                <input id="hand-center-r" type="range" min="-1" max="2" value="0" step="0.05" class="mt-2 w-full" />
+              </label>
+              <label class="block">
+                <span>Card distance (R): <span id="hand-distance-r-value">1</span></span>
+                <input id="hand-distance-r" type="range" min="-1" max="2" value="1" step="0.05" class="mt-2 w-full" />
+              </label>
+              <label class="block">
+                <span>Angular separation (deg): <span id="hand-angle-value">8</span></span>
+                <input id="hand-angle" type="range" min="0" max="45" value="8" class="mt-2 w-full" />
+              </label>
+              <label class="block">
+                <span>Quirk offset (R): <span id="quirk-offset-r-value">0.18</span></span>
+                <input id="quirk-offset-r" type="range" min="-0.2" max="0.4" value="0.18" step="0.01" class="mt-2 w-full" />
+              </label>
+            </div>
+          </div>
+          <div class="mt-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-400">Piles</div>
+            <div class="mt-3 space-y-3 text-xs text-slate-300">
+              <label class="block">
+                <span>Up from center (R): <span id="pile-up-r-value">0.7</span></span>
+                <input id="pile-up-r" type="range" min="-1" max="2" value="0.7" step="0.05" class="mt-2 w-full" />
+              </label>
+              <label class="block">
+                <span>Distance between (R): <span id="pile-gap-r-value">0.9</span></span>
+                <input id="pile-gap-r" type="range" min="0" max="2" value="0.9" step="0.05" class="mt-2 w-full" />
+              </label>
+              <label class="block">
+                <span>Pile size (%): <span id="pile-scale-value">0.75</span></span>
+                <input id="pile-scale" type="range" min="0.4" max="1.2" value="0.75" step="0.05" class="mt-2 w-full" />
+              </label>
+              <label class="block">
+                <span>Table row center (R): <span id="table-row-r-value">0</span></span>
+                <input id="table-row-r" type="range" min="-1" max="2" value="0" step="0.05" class="mt-2 w-full" />
+              </label>
+              <label class="flex items-center gap-2">
+                <input id="table-circle" type="checkbox" class="rounded border-slate-700" checked />
+                <span>Show table circle</span>
+              </label>
             </div>
             <div class="mt-3 flex flex-wrap gap-2">
-              <button id="draw-card" class="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950" type="button">
-                Draw to hand
+              <button id="layout-copy" class="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200" type="button">
+                Copy layout CSS
               </button>
-              <button id="draw-to-table" class="rounded-lg border border-emerald-400/60 px-3 py-2 text-sm text-emerald-100" type="button">
-                Draw to table
-              </button>
-            </div>
-          </div>
-
-          <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Table</div>
-            <div id="table" class="mt-4"></div>
-          </div>
-
-          <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Discard (top)</div>
-            <button
-              id="discard-card"
-              class="discard-card mt-3 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-6 text-sm text-slate-200"
-              type="button"
-            >
-              Empty
-            </button>
-            <div class="mt-3 flex flex-wrap gap-2 text-xs">
-              <button id="discard-to-hand" class="rounded-lg border border-slate-600 px-3 py-2 text-slate-200" type="button">
-                To hand
-              </button>
-              <button id="discard-to-table" class="rounded-lg border border-slate-600 px-3 py-2 text-slate-200" type="button">
-                To table
+              <button id="layout-download" class="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200" type="button">
+                Save layout CSS
               </button>
             </div>
           </div>
+        </div>
 
-          <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
-            <div class="text-xs uppercase tracking-wide text-slate-400">Your hand</div>
-            <div id="hand" class="mt-4"></div>
+        <div class="game-main">
+          <div class="board-shell">
+            <div id="players-compact" class="players-compact"></div>
+
+            <div id="board" class="board">
+              <svg class="board-surface" viewBox="0 0 100 100" aria-hidden="true">
+                <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(148,163,184,0.35)" stroke-width="0.6" />
+                <path d="M6 50h88" stroke="rgba(148,163,184,0.2)" stroke-width="0.4" />
+                <path d="M14 72h72" stroke="rgba(148,163,184,0.2)" stroke-width="0.4" />
+              </svg>
+
+              <div id="hand" class="hand"></div>
+
+              <div class="pile deck-pile" id="deck-pile">
+                <div class="pile-card-wrap">
+                  <button id="draw-card" class="pile-card" type="button">
+                    <span class="pile-card-label">Draw</span>
+                  </button>
+                  <div class="pile-actions-overlay">
+                    <button id="draw-to-table" class="pile-action" type="button">To table</button>
+                  </div>
+                </div>
+                <div class="pile-label">Draw: <span id="deck-count">0</span></div>
+              </div>
+
+              <div class="pile discard-pile" id="discard-pile">
+                <div class="pile-card-wrap">
+                  <button
+                    id="discard-card"
+                    class="discard-card pile-card"
+                    type="button"
+                  >
+                    <span class="pile-card-label">Empty</span>
+                  </button>
+                  <div class="pile-actions-overlay">
+                    <button id="discard-to-hand" class="pile-action" type="button">To hand</button>
+                    <button id="discard-to-table" class="pile-action" type="button">To table</button>
+                  </div>
+                </div>
+                <div class="pile-label">Discard: <span id="discard-count">0</span></div>
+              </div>
+
+              <div class="table-zone">
+                <div class="table-label">Table</div>
+                <div id="table" class="table-cards"></div>
+                <button id="table-overflow" class="table-overflow" type="button"></button>
+              </div>
+            </div>
+
+            <div id="table-modal" class="table-modal hidden">
+              <div id="table-modal-overlay" class="table-modal-overlay"></div>
+              <div class="table-modal-card">
+                <div class="table-modal-header">
+                  <div class="text-xs uppercase tracking-wide text-slate-400">All table cards</div>
+                  <button id="table-modal-close" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200" type="button">
+                    Close
+                  </button>
+                </div>
+                <div id="table-modal-cards" class="table-modal-grid"></div>
+              </div>
+            </div>
+
+            <div id="card-modal" class="card-modal hidden">
+              <div id="card-modal-overlay" class="card-modal-overlay"></div>
+              <div class="card-modal-card">
+                <div class="card-modal-header">
+                  <div class="text-xs uppercase tracking-wide text-slate-400">Card</div>
+                  <button id="card-modal-close" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200" type="button">
+                    Close
+                  </button>
+                </div>
+                <div class="card-modal-body">
+                  <button id="card-modal-prev" class="card-modal-nav" type="button">◀</button>
+                  <div id="card-modal-content" class="card-modal-content"></div>
+                  <button id="card-modal-next" class="card-modal-nav" type="button">▶</button>
+                </div>
+                <div id="card-modal-actions" class="card-modal-actions"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
