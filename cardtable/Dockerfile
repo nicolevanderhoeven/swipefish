@@ -1,4 +1,7 @@
-FROM elixir:1.17-alpine
+FROM --platform=linux/amd64 elixir:1.17-alpine
+
+# Workaround QEMU JIT issue building AMD64 on ARM64
+ENV ERL_FLAGS="+JPperf true"
 
 RUN apk add --no-cache build-base git inotify-tools
 
@@ -14,9 +17,6 @@ RUN mix deps.get
 COPY lib ./lib
 COPY priv ./priv
 COPY assets ./assets
-
-RUN mix assets.setup
-RUN mix assets.build
 
 EXPOSE 4000
 

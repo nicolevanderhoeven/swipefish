@@ -81,7 +81,20 @@ defmodule Cardtable.GameServer do
     case Registry.lookup(Cardtable.GameRegistry, code) do
       [] ->
         spec = {__MODULE__, code}
-        DynamicSupervisor.start_child(Cardtable.GameSupervisor, spec)
+
+        case DynamicSupervisor.start_child(Cardtable.GameSupervisor, spec) do
+          {:ok, _pid} = ok ->
+            ok
+
+          {:error, {:already_started, _pid}} ->
+            {:ok, :already_started}
+
+          {:error, {:already_present, _pid}} ->
+            {:ok, :already_started}
+
+          other ->
+            other
+        end
       _ ->
         {:ok, :already_started}
     end

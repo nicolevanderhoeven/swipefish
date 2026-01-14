@@ -1,5 +1,7 @@
 services:
   app:
+    platform: linux/amd64
+    image: cardtable:latest
     build:
       context: .
     ports:
