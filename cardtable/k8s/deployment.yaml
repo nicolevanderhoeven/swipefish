@@ -49,14 +49,14 @@ spec:
               name: cardtable-secrets
               key: SECRET_KEY_BASE
         - name: ERL_FLAGS
-          value: "+S 2 +K true +A 5"
+          value: "+S 1 +K true +A 5"
         resources:
           requests:
             memory: "1Gi"
             cpu: "100m"
           limits:
             memory: "3Gi"
-            cpu: "2000m"
+            cpu: "500m"
         livenessProbe:
           httpGet:
             path: /
@@ -87,5 +87,26 @@ spec:
     targetPort: 4000
     protocol: TCP
     name: http
+  selector:
+    app: cardtable
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cardtable-headless
+  namespace: cardtable
+  labels:
+    app: cardtable
+spec:
+  clusterIP: None
+  ports:
+  - port: 4369
+    targetPort: 4369
+    protocol: TCP
+    name: epmd
+  - port: 9000
+    targetPort: 9000
+    protocol: TCP
+    name: dist
   selector:
     app: cardtable

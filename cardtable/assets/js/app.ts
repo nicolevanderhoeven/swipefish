@@ -70,6 +70,13 @@ const modalState = {
   lastIndex: 0,
 };
 
+const dragState = {
+  active: false,
+  cardId: "",
+  fromZone: null as "hand" | "table" | "discard" | "deck" | null,
+  pendingDiscardDraw: false, // Track if we need to move drawn card to discard
+};
+
 type LayoutConfig = {
   cardHeightR: number;
   handCenterR: number;
@@ -294,7 +301,30 @@ const connectToGame = (code: string, playerName: string) => {
   });
 
   channel.on("game:private_update", (payload: { private_state: PrivateState }) => {
+    const oldHand = state.privateState?.hand || [];
+    const oldHandIds = new Set(oldHand.map((c: any) => c.card_id));
     state.privateState = payload.private_state;
+    const newHand = state.privateState?.hand || [];
+    
+    // If we have a pending discard draw, find the newly added card and move it to discard
+    if (dragState.pendingDiscardDraw && newHand.length > 0) {
+      // Find the card that's in the new hand but wasn't in the old hand
+      // Cards are added to the beginning of the list, so check index 0 first
+      const newCard = newHand.find((c: any) => !oldHandIds.has(c.card_id));
+      if (newCard) {
+        dragState.pendingDiscardDraw = false;
+        // Move the newly drawn card to discard
+        state.channel?.push("game:move_card", {
+          card_id: newCard.card_id,
+          from_zone: "hand",
+          to_zone: "discard",
+        });
+      } else {
+        // If we can't find the new card, reset the flag to prevent infinite waiting
+        dragState.pendingDiscardDraw = false;
+      }
+    }
+    
     render();
   });
 
@@ -446,6 +476,14 @@ const renderCardModal = () => {
   const modalCard = ui.cardModalContent.querySelector(".modal-card") as HTMLElement | null;
   if (modalCard) {
     ui.cardModal.style.setProperty("--modal-card-width", `${modalCard.offsetWidth}px`);
+    
+    // Add click handler to flip table cards in modal
+    if (modalState.zone === "table") {
+      modalCard.addEventListener("click", (e) => {
+        e.stopPropagation();
+        state.channel?.push("game:flip_table_card", { card_id: cards[resolvedIndex].card_id });
+      });
+    }
   }
 
   const prevVisible = modalState.zone !== "discard";
@@ -478,9 +516,7 @@ const renderCardModal = () => {
       });
     });
   } else if (modalState.zone === "table") {
-    addAction("Flip", () => {
-      state.channel?.push("game:flip_table_card", { card_id: cards[resolvedIndex].card_id });
-    });
+    // Flip action removed - clicking the card in modal flips it
     addAction("To hand", () => {
       state.channel?.push("game:move_card", {
         card_id: cards[resolvedIndex].card_id,
@@ -529,15 +565,32 @@ const openCardModal = (zone: "hand" | "table" | "discard", cardId: string) => {
 const renderTableCard = (card: TableCard, backImage: string | null) => {
   const wrap = document.createElement("div");
   wrap.className = "card";
+  wrap.draggable = true;
+  wrap.dataset.cardId = card.card_id;
+  wrap.dataset.fromZone = "table";
   wrap.addEventListener("click", () => openCardModal("table", card.card_id));
-
-  const faceButton = document.createElement("button");
-  faceButton.className = "card-face";
-  faceButton.dataset.cardId = card.card_id;
-  faceButton.addEventListener("click", (event) => {
-    event.stopPropagation();
-    state.channel?.push("game:flip_table_card", { card_id: card.card_id });
+  wrap.addEventListener("dragstart", (e) => {
+    dragState.active = true;
+    dragState.cardId = card.card_id;
+    dragState.fromZone = "table";
+    wrap.classList.add("dragging");
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", card.card_id);
+    }
   });
+  wrap.addEventListener("dragend", () => {
+    dragState.active = false;
+    dragState.cardId = "";
+    dragState.fromZone = null;
+    wrap.classList.remove("dragging");
+    document.querySelectorAll(".drop-zone").forEach((zone) => {
+      zone.classList.remove("drag-over");
+    });
+  });
+
+  const face = document.createElement("div");
+  face.className = "card-face";
 
   if (card.face_state === "down") {
     if (backImage) {
@@ -545,9 +598,9 @@ const renderTableCard = (card: TableCard, backImage: string | null) => {
       img.className = "card-image";
       img.alt = "Card back";
       img.src = backImage;
-      faceButton.appendChild(img);
+      face.appendChild(img);
     } else {
-      faceButton.textContent = "Face down";
+      face.textContent = "Face down";
     }
   } else {
     const faceTitle = cardTitle(card.face);
@@ -558,7 +611,7 @@ const renderTableCard = (card: TableCard, backImage: string | null) => {
       img.className = "card-image";
       img.alt = faceTitle || "Card";
       img.src = card.face.image;
-      faceButton.appendChild(img);
+      face.appendChild(img);
     }
 
     if (card.face_state === "up") {
@@ -566,68 +619,61 @@ const renderTableCard = (card: TableCard, backImage: string | null) => {
         const title = document.createElement("div");
         title.className = "card-title";
         title.textContent = faceTitle || "Card";
-        faceButton.prepend(title);
+        face.prepend(title);
       }
       if (faceBody) {
         const body = document.createElement("div");
         body.className = "card-body";
         body.textContent = faceBody;
-        faceButton.appendChild(body);
+        face.appendChild(body);
       }
     } else if (card.face_state === "quirk") {
       if (faceTitle || !hasImage) {
         const title = document.createElement("div");
         title.className = "card-title";
         title.textContent = faceTitle || "Card";
-        faceButton.prepend(title);
+        face.prepend(title);
       }
       if (faceBody) {
         const body = document.createElement("div");
         body.className = "card-body";
         body.textContent = faceBody;
-        faceButton.appendChild(body);
+        face.appendChild(body);
       }
-      addQuirkBubble(faceButton, card.quirk);
+      addQuirkBubble(face, card.quirk);
     }
   }
 
-  const actions = document.createElement("div");
-  actions.className = "card-actions card-actions-top";
-
-  const toHand = document.createElement("button");
-  toHand.textContent = "To hand";
-  toHand.addEventListener("click", (event) => {
-    event.stopPropagation();
-    state.channel?.push("game:move_card", {
-      card_id: card.card_id,
-      from_zone: "table",
-      to_zone: "hand",
-    });
-  });
-
-  const toDiscard = document.createElement("button");
-  toDiscard.textContent = "To discard";
-  toDiscard.addEventListener("click", (event) => {
-    event.stopPropagation();
-    state.channel?.push("game:move_card", {
-      card_id: card.card_id,
-      from_zone: "table",
-      to_zone: "discard",
-    });
-  });
-
-  actions.appendChild(toHand);
-  actions.appendChild(toDiscard);
-
-  wrap.appendChild(faceButton);
-  wrap.appendChild(actions);
+  wrap.appendChild(face);
   return wrap;
 };
 
 const renderHandCard = (card: { card_id: string; face: CardFace | null; quirk: CardFace | null }) => {
   const wrap = document.createElement("div");
   wrap.className = "card";
+  wrap.draggable = true;
+  wrap.dataset.cardId = card.card_id;
+  wrap.dataset.fromZone = "hand";
   wrap.addEventListener("click", () => openCardModal("hand", card.card_id));
+  wrap.addEventListener("dragstart", (e) => {
+    dragState.active = true;
+    dragState.cardId = card.card_id;
+    dragState.fromZone = "hand";
+    wrap.classList.add("dragging");
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", card.card_id);
+    }
+  });
+  wrap.addEventListener("dragend", () => {
+    dragState.active = false;
+    dragState.cardId = "";
+    dragState.fromZone = null;
+    wrap.classList.remove("dragging");
+    document.querySelectorAll(".drop-zone").forEach((zone) => {
+      zone.classList.remove("drag-over");
+    });
+  });
 
   const face = document.createElement("div");
   face.className = "card-face";
@@ -655,44 +701,23 @@ const renderHandCard = (card: { card_id: string; face: CardFace | null; quirk: C
     face.appendChild(body);
   }
 
-  const actions = document.createElement("div");
-  actions.className = "card-actions";
-
-  const toTable = document.createElement("button");
-  toTable.textContent = "To table";
-  toTable.addEventListener("click", (event) => {
-    event.stopPropagation();
-    state.channel?.push("game:move_card", {
-      card_id: card.card_id,
-      from_zone: "hand",
-      to_zone: "table",
-    });
-  });
-
-  const toDiscard = document.createElement("button");
-  toDiscard.textContent = "To discard";
-  toDiscard.addEventListener("click", (event) => {
-    event.stopPropagation();
-    state.channel?.push("game:move_card", {
-      card_id: card.card_id,
-      from_zone: "hand",
-      to_zone: "discard",
-    });
-  });
-
-  actions.appendChild(toTable);
-  actions.appendChild(toDiscard);
-
   if (card.quirk) {
     addQuirkBubble(face, card.quirk);
   }
   wrap.appendChild(face);
-  wrap.appendChild(actions);
   return wrap;
 };
 
 const render = () => {
   if (!state.publicState) return;
+  
+  // Update drop zone positions when layout changes
+  if ((window as any).updateTableDropZonePosition) {
+    (window as any).updateTableDropZonePosition();
+  }
+  if ((window as any).updateHandDropZonePosition) {
+    (window as any).updateHandDropZonePosition();
+  }
 
   ui.deckCount.textContent = String(state.publicState.deck_count);
   ui.discardCount.textContent = String(state.publicState.discard_count);
@@ -775,11 +800,14 @@ const render = () => {
 
   ui.discardCard.dataset.cardId = "";
   ui.discardCard.innerHTML = `<span class="pile-card-label">Empty</span>`;
+  ui.discardCard.draggable = false;
   ui.discardToHand.disabled = true;
   ui.discardToTable.disabled = true;
   if (state.publicState.discard_top) {
     const discard = state.publicState.discard_top;
     ui.discardCard.dataset.cardId = discard.card_id;
+    ui.discardCard.dataset.fromZone = "discard";
+    ui.discardCard.draggable = true;
     ui.discardCard.innerHTML = "";
     if (discard.face?.image) {
       const img = document.createElement("img");
@@ -953,9 +981,10 @@ ui.tableRowR.addEventListener("input", rerenderHand);
 ui.tableCircle.addEventListener("input", rerenderHand);
 
 
-ui.drawButton.addEventListener("click", () => {
-  state.channel?.push("game:draw", { to_zone: "hand" });
-});
+// Removed single-click draw - use drag and drop instead
+// ui.drawButton.addEventListener("click", () => {
+//   state.channel?.push("game:draw", { to_zone: "hand" });
+// });
 
 ui.drawToTableButton.addEventListener("click", () => {
   state.channel?.push("game:draw", { to_zone: "table" });
@@ -1101,10 +1130,473 @@ ui.discardToTable.addEventListener("click", () => {
 });
 
 
+const setupDropZones = () => {
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = "move";
+    }
+    const target = e.currentTarget as HTMLElement;
+    target.classList.add("drag-over");
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    const target = e.currentTarget as HTMLElement;
+    target.classList.remove("drag-over");
+  };
+
+  const handleDrop = (e: DragEvent, toZone: "hand" | "table" | "discard") => {
+    e.preventDefault();
+    const target = e.currentTarget as HTMLElement;
+    target.classList.remove("drag-over");
+
+    if (!dragState.active || !dragState.fromZone || !dragState.cardId) {
+      return;
+    }
+
+    const fromZone = dragState.fromZone;
+    const cardId = dragState.cardId;
+
+    // Special case: dragging from deck - draw a card
+    if (fromZone === "deck") {
+      if (toZone === "table" || toZone === "hand") {
+        state.channel?.push("game:draw", { to_zone: toZone });
+      } else if (toZone === "discard") {
+        // For deck to discard: draw to hand first, then move to discard after state updates
+        dragState.pendingDiscardDraw = true;
+        state.channel?.push("game:draw", { to_zone: "hand" });
+      }
+      return;
+    }
+
+    // Special case: dragging table card to table zone flips it
+    if (fromZone === "table" && toZone === "table") {
+      state.channel?.push("game:flip_table_card", { card_id: cardId });
+      return;
+    }
+
+    // Don't move if same zone (except table→table which is handled above)
+    if (fromZone === toZone) {
+      return;
+    }
+
+    state.channel?.push("game:move_card", {
+      card_id: cardId,
+      from_zone: fromZone,
+      to_zone: toZone,
+    });
+  };
+
+  // Setup hand drop zone - create a large invisible overlay for better drop detection
+  // This covers the whole screen above the deck
+  const handDropZone = document.createElement("div");
+  handDropZone.id = "hand-drop-zone";
+  handDropZone.className = "drop-zone hand-drop-zone";
+  handDropZone.style.position = "fixed";
+  handDropZone.style.left = "0";
+  handDropZone.style.width = "100%";
+  handDropZone.style.height = "100%";
+  handDropZone.style.pointerEvents = "none";
+  handDropZone.style.zIndex = "1";
+  
+  // Position it above the deck
+  const updateHandDropZonePosition = () => {
+    if (!ui.deckPile) return;
+    const deckRect = ui.deckPile.getBoundingClientRect();
+    const deckTop = deckRect.top;
+    handDropZone.style.top = "0";
+    handDropZone.style.height = `${deckTop}px`;
+  };
+  
+  // Store the update function globally so it can be called when layout changes
+  (window as any).updateHandDropZonePosition = updateHandDropZonePosition;
+  
+  updateHandDropZonePosition();
+  window.addEventListener("resize", updateHandDropZonePosition);
+  document.body.appendChild(handDropZone);
+
+  // Make it active only when dragging
+  let isDraggingHand = false;
+
+  const handHandleDragOver = (e: DragEvent) => {
+    if (!isDraggingHand) return;
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = "move";
+    }
+    handDropZone.classList.add("drag-over");
+    // Also highlight the actual hand element
+    ui.hand.classList.add("drag-over");
+  };
+
+  const handHandleDragLeave = (e: DragEvent) => {
+    // Only remove highlight if leaving the entire drop zone
+    const relatedTarget = e.relatedTarget as HTMLElement | null;
+    if (!relatedTarget || !handDropZone.contains(relatedTarget)) {
+      handDropZone.classList.remove("drag-over");
+      ui.hand.classList.remove("drag-over");
+    }
+  };
+
+  const handHandleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handDropZone.classList.remove("drag-over");
+    ui.hand.classList.remove("drag-over");
+    handleDrop(e, "hand");
+  };
+
+  // Setup both the overlay and the actual hand element
+  handDropZone.addEventListener("dragover", handHandleDragOver);
+  handDropZone.addEventListener("dragleave", handHandleDragLeave);
+  handDropZone.addEventListener("drop", handHandleDrop);
+  
+  ui.hand.classList.add("drop-zone");
+  ui.hand.addEventListener("dragover", handHandleDragOver);
+  ui.hand.addEventListener("dragleave", handHandleDragLeave);
+  ui.hand.addEventListener("drop", handHandleDrop);
+
+  // Track when dragging starts/ends - will be set up after table zone is created
+
+  // Setup table drop zone - create a large invisible overlay for better drop detection
+  // This covers the whole screen below the center of the table
+  const tableDropZone = document.createElement("div");
+  tableDropZone.id = "table-drop-zone";
+  tableDropZone.className = "drop-zone table-drop-zone";
+  tableDropZone.style.position = "fixed";
+  tableDropZone.style.left = "0";
+  tableDropZone.style.width = "100%";
+  tableDropZone.style.height = "100%";
+  tableDropZone.style.pointerEvents = "none";
+  tableDropZone.style.zIndex = "1";
+  
+  // Position it below the center of the table
+  const updateTableDropZonePosition = () => {
+    if (!ui.board) return;
+    const boardRect = ui.board.getBoundingClientRect();
+    const tableCenterY = boardRect.top + boardRect.height / 2;
+    tableDropZone.style.top = `${tableCenterY}px`;
+    tableDropZone.style.height = `${window.innerHeight - tableCenterY}px`;
+  };
+  
+  // Store the update function globally so it can be called when layout changes
+  (window as any).updateTableDropZonePosition = updateTableDropZonePosition;
+  
+  updateTableDropZonePosition();
+  window.addEventListener("resize", updateTableDropZonePosition);
+  document.body.appendChild(tableDropZone);
+
+  // Make it active only when dragging
+  let isDragging = false;
+  const originalHandleDragOver = handleDragOver;
+  const originalHandleDragLeave = handleDragLeave;
+  const originalHandleDrop = handleDrop;
+
+  const tableHandleDragOver = (e: DragEvent) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = "move";
+    }
+    tableDropZone.classList.add("drag-over");
+    // Also highlight the actual table element
+    ui.table.classList.add("drag-over");
+  };
+
+  const tableHandleDragLeave = (e: DragEvent) => {
+    // Only remove highlight if leaving the entire drop zone
+    const relatedTarget = e.relatedTarget as HTMLElement | null;
+    if (!relatedTarget || !tableDropZone.contains(relatedTarget)) {
+      tableDropZone.classList.remove("drag-over");
+      ui.table.classList.remove("drag-over");
+    }
+  };
+
+  const tableHandleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    tableDropZone.classList.remove("drag-over");
+    ui.table.classList.remove("drag-over");
+    originalHandleDrop(e, "table");
+  };
+
+  // Setup both the overlay and the actual table element
+  tableDropZone.addEventListener("dragover", tableHandleDragOver);
+  tableDropZone.addEventListener("dragleave", tableHandleDragLeave);
+  tableDropZone.addEventListener("drop", tableHandleDrop);
+  
+  ui.table.classList.add("drop-zone");
+  ui.table.addEventListener("dragover", tableHandleDragOver);
+  ui.table.addEventListener("dragleave", tableHandleDragLeave);
+  ui.table.addEventListener("drop", tableHandleDrop);
+
+  // Track when dragging starts/ends to enable/disable both overlays
+  document.addEventListener("dragstart", () => {
+    isDragging = true;
+    isDraggingHand = true;
+    tableDropZone.style.pointerEvents = "auto";
+    handDropZone.style.pointerEvents = "auto";
+  });
+  document.addEventListener("dragend", () => {
+    isDragging = false;
+    isDraggingHand = false;
+    tableDropZone.style.pointerEvents = "none";
+    handDropZone.style.pointerEvents = "none";
+    tableDropZone.classList.remove("drag-over");
+    handDropZone.classList.remove("drag-over");
+    ui.table.classList.remove("drag-over");
+    ui.hand.classList.remove("drag-over");
+  });
+
+  // Setup discard drop zone
+  ui.discardPile.classList.add("drop-zone");
+  ui.discardPile.addEventListener("dragover", handleDragOver);
+  ui.discardPile.addEventListener("dragleave", handleDragLeave);
+  ui.discardPile.addEventListener("drop", (e) => handleDrop(e, "discard"));
+
+  // Setup discard card drag handlers
+  ui.discardCard.addEventListener("dragstart", (e) => {
+    const cardId = ui.discardCard.dataset.cardId;
+    if (!cardId) {
+      e.preventDefault();
+      return;
+    }
+    dragState.active = true;
+    dragState.cardId = cardId;
+    dragState.fromZone = "discard";
+    ui.discardCard.classList.add("dragging");
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", cardId);
+    }
+  });
+
+  ui.discardCard.addEventListener("dragend", () => {
+    dragState.active = false;
+    dragState.cardId = "";
+    dragState.fromZone = null;
+    ui.discardCard.classList.remove("dragging");
+    document.querySelectorAll(".drop-zone").forEach((zone) => {
+      zone.classList.remove("drag-over");
+    });
+  });
+
+  // Setup deck draw button drag handlers
+  // Make the entire button draggable - CSS will handle pointer-events on children
+  ui.drawButton.draggable = true;
+  ui.drawButton.dataset.fromZone = "deck";
+  
+  ui.drawButton.addEventListener("dragstart", (e) => {
+    dragState.active = true;
+    dragState.cardId = "deck";
+    dragState.fromZone = "deck";
+    ui.drawButton.classList.add("dragging");
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", "deck");
+    }
+  });
+  
+  // Prevent text selection on mousedown (but allow drag)
+  ui.drawButton.addEventListener("mousedown", (e) => {
+    // Only prevent default for double-clicks to avoid interfering with drag
+    if (e.detail > 1) {
+      e.preventDefault();
+    }
+  });
+  ui.drawButton.addEventListener("dragend", () => {
+    dragState.active = false;
+    dragState.cardId = "";
+    dragState.fromZone = null;
+    ui.drawButton.classList.remove("dragging");
+    document.querySelectorAll(".drop-zone").forEach((zone) => {
+      zone.classList.remove("drag-over");
+    });
+  });
+};
+
 const initialGame = new URLSearchParams(window.location.search).get("game");
 if (initialGame) {
   ui.codeInput.value = initialGame.toUpperCase();
   setGameLink(initialGame.toUpperCase());
 }
 
+const setupTouchDrag = () => {
+  let touchStartElement: HTMLElement | null = null;
+  let touchStartZone: "hand" | "table" | "discard" | "deck" | null = null;
+  let touchStartCardId: string | null = null;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let dragPreview: HTMLElement | null = null;
+
+  const createDragPreview = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    const preview = element.cloneNode(true) as HTMLElement;
+    preview.style.position = "fixed";
+    preview.style.left = `${rect.left}px`;
+    preview.style.top = `${rect.top}px`;
+    preview.style.width = `${rect.width}px`;
+    preview.style.height = `${rect.height}px`;
+    preview.style.pointerEvents = "none";
+    preview.style.opacity = "0.7";
+    preview.style.zIndex = "10000";
+    preview.style.transform = "rotate(0deg)";
+    document.body.appendChild(preview);
+    return preview;
+  };
+
+  const getDropZone = (x: number, y: number): "hand" | "table" | "discard" | null => {
+    const handRect = ui.hand.getBoundingClientRect();
+    const tableRect = ui.table.getBoundingClientRect();
+    const discardRect = ui.discardPile.getBoundingClientRect();
+    const boardRect = ui.board.getBoundingClientRect();
+    const deckRect = ui.deckPile.getBoundingClientRect();
+
+    // Hand zone: whole screen above the deck
+    const deckTop = deckRect.top;
+    if (y < deckTop && x >= 0 && x <= window.innerWidth) {
+      return "hand";
+    }
+    
+    // Also check if we're within the actual hand element bounds
+    if (x >= handRect.left && x <= handRect.right && y >= handRect.top && y <= handRect.bottom) {
+      return "hand";
+    }
+    
+    // Check discard zone
+    if (x >= discardRect.left && x <= discardRect.right && y >= discardRect.top && y <= discardRect.bottom) {
+      return "discard";
+    }
+    
+    // Table zone: whole screen below the center of the table
+    // The table center is roughly at the center of the board
+    const tableCenterY = boardRect.top + boardRect.height / 2;
+    // If we're below the table center and within the board area, it's the table zone
+    if (y >= tableCenterY && x >= boardRect.left && x <= boardRect.right && y >= boardRect.top && y <= boardRect.bottom) {
+      return "table";
+    }
+    
+    // Also check if we're within the actual table element bounds
+    if (x >= tableRect.left && x <= tableRect.right && y >= tableRect.top && y <= tableRect.bottom) {
+      return "table";
+    }
+    
+    return null;
+  };
+
+  const handleTouchStart = (e: TouchEvent) => {
+    const target = e.target as HTMLElement;
+    const card = target.closest(".card[draggable='true']") as HTMLElement | null;
+    const discardCard = target.closest("#discard-card[draggable='true']") as HTMLElement | null;
+    const drawButton = target.closest("#draw-card[draggable='true']") as HTMLElement | null;
+    
+    const element = card || discardCard || drawButton;
+    if (!element) return;
+
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchStartElement = element;
+    touchStartCardId = element.dataset.cardId || (element.id === "draw-card" ? "deck" : null);
+    touchStartZone = (element.dataset.fromZone as "hand" | "table" | "discard" | "deck") || null;
+
+    if ((touchStartCardId || touchStartZone === "deck") && touchStartZone) {
+      dragState.active = true;
+      dragState.cardId = touchStartCardId;
+      dragState.fromZone = touchStartZone;
+      element.classList.add("dragging");
+      dragPreview = createDragPreview(element);
+    }
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!dragState.active || !dragPreview) return;
+
+    e.preventDefault();
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+
+    dragPreview.style.left = `${touch.clientX - dragPreview.offsetWidth / 2}px`;
+    dragPreview.style.top = `${touch.clientY - dragPreview.offsetHeight / 2}px`;
+
+    // Update drop zone highlighting
+    document.querySelectorAll(".drop-zone").forEach((zone) => {
+      zone.classList.remove("drag-over");
+    });
+
+    const dropZone = getDropZone(touch.clientX, touch.clientY);
+    if (dropZone) {
+      const zoneElement = dropZone === "hand" ? ui.hand : dropZone === "table" ? ui.table : ui.discardPile;
+      zoneElement.classList.add("drag-over");
+    }
+  };
+
+  const handleTouchEnd = (e: TouchEvent) => {
+    if (!dragState.active || !touchStartCardId || !touchStartZone) {
+      cleanup();
+      return;
+    }
+
+    const touch = e.changedTouches[0];
+    const dropZone = getDropZone(touch.clientX, touch.clientY);
+
+    if (dropZone && touchStartZone && touchStartCardId) {
+      // Special case: dragging from deck - draw a card
+      if (touchStartZone === "deck") {
+        if (dropZone === "table" || dropZone === "hand") {
+          state.channel?.push("game:draw", { to_zone: dropZone });
+        } else if (dropZone === "discard") {
+          // For deck to discard: draw to hand first, then move to discard after state updates
+          dragState.pendingDiscardDraw = true;
+          state.channel?.push("game:draw", { to_zone: "hand" });
+        }
+      }
+      // Special case: dragging table card to table zone flips it
+      else if (touchStartZone === "table" && dropZone === "table") {
+        state.channel?.push("game:flip_table_card", { card_id: touchStartCardId });
+      } else if (touchStartZone !== dropZone) {
+        // Move card to different zone
+        state.channel?.push("game:move_card", {
+          card_id: touchStartCardId,
+          from_zone: touchStartZone,
+          to_zone: dropZone,
+        });
+      }
+    }
+
+    cleanup();
+  };
+
+  const cleanup = () => {
+    if (dragPreview) {
+      dragPreview.remove();
+      dragPreview = null;
+    }
+    if (touchStartElement) {
+      touchStartElement.classList.remove("dragging");
+    }
+    document.querySelectorAll(".drop-zone").forEach((zone) => {
+      zone.classList.remove("drag-over");
+    });
+    dragState.active = false;
+    dragState.cardId = "";
+    dragState.fromZone = null;
+    touchStartElement = null;
+    touchStartZone = null;
+    touchStartCardId = null;
+  };
+
+  // Add touch listeners to the board
+  ui.board.addEventListener("touchstart", handleTouchStart, { passive: false });
+  ui.board.addEventListener("touchmove", handleTouchMove, { passive: false });
+  ui.board.addEventListener("touchend", handleTouchEnd, { passive: false });
+  ui.board.addEventListener("touchcancel", cleanup, { passive: false });
+
+  // Also add to discard card
+  ui.discardCard.addEventListener("touchstart", handleTouchStart, { passive: false });
+};
+
+setupDropZones();
+setupTouchDrag();
 loadLayout();

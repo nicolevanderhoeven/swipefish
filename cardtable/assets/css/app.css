@@ -187,31 +187,33 @@ body {
 }
 
 .card-actions {
-  display: flex;
-  gap: 0.5rem;
-  position: absolute;
-  left: 0.5rem;
-  right: 0.5rem;
-  bottom: 0.5rem;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
+  display: none;
 }
 
-.card-actions-top {
-  top: 0.2rem;
-  bottom: auto;
+.card.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  cursor: grabbing;
 }
 
-.card-actions button {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
+.card[draggable="true"] {
+  cursor: grab;
+}
+
+.card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.drop-zone {
+  position: relative;
+  min-height: 100px;
+  transition: background-color 0.2s ease;
+}
+
+.drop-zone.drag-over {
+  background-color: rgba(99, 102, 241, 0.1);
+  border: 2px dashed rgba(99, 102, 241, 0.5);
   border-radius: 0.5rem;
-  border: 1px solid rgb(15 23 42);
-  background: rgba(15, 23, 42, 0.9);
-  color: rgb(248 250 252);
-  box-shadow: 0 6px 12px rgba(2, 6, 23, 0.35);
 }
 
 .discard-card {
@@ -229,11 +231,6 @@ body {
   object-fit: cover;
 }
 
-.card:hover .card-actions,
-.card:focus-within .card-actions {
-  opacity: 1;
-  pointer-events: auto;
-}
 
 .player-item {
   display: flex;
@@ -367,6 +364,27 @@ body {
   justify-content: center;
   text-align: center;
   padding: 0.25rem;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.pile-card[draggable="true"] {
+  cursor: grab;
+}
+
+.pile-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.pile-card[draggable="true"] * {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .pile-card.has-image {
@@ -389,22 +407,7 @@ body {
 }
 
 .pile-actions-overlay {
-  position: absolute;
-  left: 0.4rem;
-  right: 0.4rem;
-  bottom: 0.4rem;
-  display: flex;
-  gap: 0.35rem;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-}
-
-.pile-card-wrap:hover .pile-actions-overlay,
-.pile-card-wrap:focus-within .pile-actions-overlay {
-  opacity: 1;
-  pointer-events: auto;
+  display: none;
 }
 
 .deck-pile {

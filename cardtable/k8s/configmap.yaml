@@ -8,3 +8,5 @@ data:
   PHX_HOST: "cardtable.swipe.fish"
   PHX_SERVER: "true"
   MIX_ENV: "prod"
+  DNS_CLUSTER_QUERY: "cardtable-headless.cardtable.svc.cluster.local"
+  RELEASE_COOKIE: "cardtable-cookie"
