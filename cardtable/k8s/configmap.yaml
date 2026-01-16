@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cardtable-config
+  namespace: cardtable
+data:
+  PORT: "4000"
+  PHX_HOST: "cardtable.swipe.fish"
+  PHX_SERVER: "true"
+  MIX_ENV: "prod"

@@ -1,0 +1,8 @@
+_build
+deps
+assets/node_modules
+.git
+.elixir_ls
+log
+tmp
+.DS_Store

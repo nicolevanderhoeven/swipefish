@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cardtable
+  namespace: cardtable
+  labels:
+    app: cardtable
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cardtable
+  template:
+    metadata:
+      labels:
+        app: cardtable
+    spec:
+      containers:
+      - name: cardtable
+        image: cardtable:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4000
+          name: http
+        env:
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: cardtable-config
+              key: PORT
+        - name: PHX_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: cardtable-config
+              key: PHX_HOST
+        - name: PHX_SERVER
+          valueFrom:
+            configMapKeyRef:
+              name: cardtable-config
+              key: PHX_SERVER
+        - name: MIX_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: cardtable-config
+              key: MIX_ENV
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: cardtable-secrets
+              key: SECRET_KEY_BASE
+        - name: ERL_FLAGS
+          value: "+S 2 +K true +A 5"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "100m"
+          limits:
+            memory: "3Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 4000
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 4000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cardtable
+  namespace: cardtable
+  labels:
+    app: cardtable
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 4000
+    protocol: TCP
+    name: http
+  selector:
+    app: cardtable
