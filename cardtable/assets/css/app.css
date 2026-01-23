@@ -107,8 +107,10 @@
   --card-height: 0px;
   --card-width: 0px;
   --card-height-r: 0.28;
+  --card-text-scale: 1;
   --quirk-offset-r: 0.18;
   --table-row-r: 0;
+  --table-card-gap: 0.6;
   --pile-scale: 0.75;
   --pile-height: 0px;
   --pile-width: 0px;
@@ -142,6 +144,16 @@ body {
   aspect-ratio: 5 / 7;
 }
 
+.card.face-down {
+  padding: 0;
+}
+
+.card.face-down .card-face {
+  gap: 0;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
 .card-face {
   display: flex;
   flex-direction: column;
@@ -164,16 +176,24 @@ body {
   object-fit: contain;
 }
 
+.card-image.card-back-image {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0.6rem;
+  object-fit: cover;
+}
+
 .card-title {
   font-weight: 700;
-  font-size: calc(var(--card-height, 200px) * 0.085);
+  font-size: calc(var(--card-height, 200px) * 0.085 * var(--card-text-scale, 1));
   color: rgb(15 23 42);
   padding: 0.1rem 0.2rem;
   text-align: center;
 }
 
 .card-body {
-  font-size: calc(var(--card-height, 200px) * 0.07);
+  font-size: calc(var(--card-height, 200px) * 0.07 * var(--card-text-scale, 1));
   line-height: 1.1;
   color: rgb(15 23 42);
   padding: 0.1rem 0.2rem;
@@ -182,7 +202,7 @@ body {
 }
 
 .card-quirk {
-  font-size: 0.85rem;
+  font-size: calc(var(--card-height, 200px) * 0.06 * var(--card-text-scale, 1));
   color: rgb(148 163 184);
 }
 
@@ -288,19 +308,30 @@ body {
   width: 100%;
   height: 100%;
   opacity: var(--table-circle, 1);
+  /* Never intercept pointer events (can block drag/hover on piles on some browsers/layouts) */
+  pointer-events: none;
 }
 
 .players-compact {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
-  width: min(240px, 60vw);
-  padding: 0.75rem;
-  border-radius: 1rem;
+  left: 50%;
+  /* Bottom edge of hand area: hand top (-8%) + hand height (44%) = 36% */
+  top: 36%;
+  transform: translate(-50%, -100%);
+  width: auto;
+  max-width: min(92%, 520px);
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
   border: 1px solid rgba(30, 41, 59, 0.7);
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(6px);
+  text-align: center;
   z-index: 5;
+}
+
+.players-compact-summary {
+  font-size: 0.85rem;
+  color: rgb(226 232 240);
 }
 
 .hand {
@@ -328,7 +359,8 @@ body {
   align-items: center;
   justify-content: flex-start;
   gap: 0.35rem;
-  z-index: 3;
+  /* Must be above the hand drop-zone overlay so deck/discard remain draggable */
+  z-index: 7;
   transform: translate(-50%, -50%);
 }
 
@@ -337,6 +369,7 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgb(148 163 184);
+  white-space: nowrap;
 }
 
 .pile-meta {
@@ -369,6 +402,24 @@ body {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+}
+
+.pile-card.render-as-card {
+  /* Make discard tops look like real cards (same face/title/body/image), but sized to the pile. */
+  --card-height: var(--pile-height, var(--card-height, 0px));
+  --card-width: var(--pile-width, var(--card-width, 0px));
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0.4rem;
+  border-radius: 1rem;
+  border: 2px solid rgb(15 23 42);
+  background: rgb(248 250 252);
+  color: rgb(15 23 42);
+}
+
+.pile-card.render-as-card .card-face {
+  height: 100%;
 }
 
 .pile-card[draggable="true"] {
@@ -420,18 +471,30 @@ body {
   right: 14%;
 }
 
+.quirk-deck-pile {
+  top: 14%;
+  left: 14%;
+}
+
+.quirk-discard-pile {
+  top: 14%;
+  right: 14%;
+}
+
 .table-zone {
   position: absolute;
-  left: 8%;
-  right: 8%;
+  /* Match the table circle diameter (circle is r=48 in a 100x100 viewBox => 2% inset). */
+  left: 2%;
+  right: 2%;
   top: 50%;
   height: 58%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 0.5rem;
   z-index: 2;
-  pointer-events: none;
+  /* Allow horizontal scrolling within table rows (and let the table be a real drop target). */
+  pointer-events: auto;
 }
 
 .table-label {
@@ -443,16 +506,82 @@ body {
 
 .table-cards {
   width: 100%;
-  display: grid;
-  grid-template-columns: repeat(4, var(--card-width, min(120px, 32vw)));
-  grid-auto-rows: var(--card-height, auto);
-  justify-content: center;
-  align-content: start;
-  gap: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .table-cards .card {
   pointer-events: auto;
+}
+
+.table-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.table-row-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(148 163 184);
+  text-align: left;
+}
+
+.table-row-cards {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-content: start;
+  gap: calc(var(--table-card-gap, 0.6) * 1rem);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
+  padding-bottom: 0.25rem;
+  scroll-snap-type: x proximity;
+}
+
+.table-row-cards.overflowing {
+  justify-content: flex-start;
+}
+
+.table-row-cards::-webkit-scrollbar {
+  height: 10px;
+}
+
+.table-row-cards::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+
+.table-row-cards > .card {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.table-modal-grid .card {
+  position: relative;
+}
+
+.played-by-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 0.65rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.7);
+  color: rgb(226 232 240);
+  border: 1px solid rgba(71, 85, 105, 0.7);
+  pointer-events: none;
+  max-width: calc(100% - 12px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .table-overflow {

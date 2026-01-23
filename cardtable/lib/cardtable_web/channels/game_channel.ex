@@ -49,8 +49,11 @@ defmodule CardtableWeb.GameChannel do
     {:noreply, socket}
   end
 
-  def handle_in("game:draw", %{"to_zone" => to_zone}, socket) do
-    with {:ok, game, player_id, available_decks} <- call_game(socket, {:draw, to_zone}) do
+  def handle_in("game:draw", payload, socket) do
+    to_zone = payload["to_zone"]
+    deck = payload["deck"]
+
+    with {:ok, game, player_id, available_decks} <- call_game(socket, {:draw, deck, to_zone}) do
       broadcast_update(socket, game, available_decks)
       push_private(socket, game, player_id)
       {:noreply, socket}
@@ -80,27 +83,10 @@ defmodule CardtableWeb.GameChannel do
     end
   end
 
-  def handle_in("game:set_table_position", %{"card_id" => card_id, "position" => position}, socket) do
-    with {:ok, game, _player_id, available_decks} <- call_game(socket, {:set_table_position, card_id, position}) do
-      broadcast_update(socket, game, available_decks)
-      {:noreply, socket}
-    else
-      {:error, reason} -> reply_error(socket, reason)
-    end
-  end
-
   def handle_in("game:flip_table_card", %{"card_id" => card_id}, socket) do
-    with {:ok, game, _player_id, available_decks} <- call_game(socket, {:flip_table_card, card_id}) do
+    with {:ok, game, player_id, available_decks} <- call_game(socket, {:flip_table_card, card_id}) do
       broadcast_update(socket, game, available_decks)
-      {:noreply, socket}
-    else
-      {:error, reason} -> reply_error(socket, reason)
-    end
-  end
-
-  def handle_in("game:toggle_discard_quirk", _payload, socket) do
-    with {:ok, game, _player_id, available_decks} <- call_game(socket, :toggle_discard_quirk) do
-      broadcast_update(socket, game, available_decks)
+      push_private(socket, game, player_id)
       {:noreply, socket}
     else
       {:error, reason} -> reply_error(socket, reason)
@@ -109,6 +95,15 @@ defmodule CardtableWeb.GameChannel do
 
   def handle_in("game:shuffle_discard_into_deck", _payload, socket) do
     with {:ok, game, _player_id, available_decks} <- call_game(socket, :shuffle_discard_into_deck) do
+      broadcast_update(socket, game, available_decks)
+      {:noreply, socket}
+    else
+      {:error, reason} -> reply_error(socket, reason)
+    end
+  end
+
+  def handle_in("game:shuffle_quirk_discard_into_deck", _payload, socket) do
+    with {:ok, game, _player_id, available_decks} <- call_game(socket, :shuffle_quirk_discard_into_deck) do
       broadcast_update(socket, game, available_decks)
       {:noreply, socket}
     else
@@ -147,8 +142,10 @@ defmodule CardtableWeb.GameChannel do
   end
 
   # Dispatches a draw request to the game server.
-  defp call_game(socket, {:draw, to_zone}) do
-    GameServer.draw(socket.assigns.game_code, socket.assigns.player_id, to_atom_zone(to_zone))
+  # Defaults deck to fish for backwards compatibility.
+  defp call_game(socket, {:draw, deck, to_zone}) do
+    deck_atom = to_atom_deck(deck)
+    GameServer.draw(socket.assigns.game_code, socket.assigns.player_id, deck_atom, to_atom_zone(to_zone))
   end
 
   # Dispatches a move-card request to the game server.
@@ -168,24 +165,17 @@ defmodule CardtableWeb.GameChannel do
     GameServer.steal_random(socket.assigns.game_code, socket.assigns.player_id, from_player_id, to_atom_zone(to_zone))
   end
 
-  # Dispatches a table-position update to the game server.
-  defp call_game(socket, {:set_table_position, card_id, position}) do
-    GameServer.set_table_position(socket.assigns.game_code, card_id, position)
-  end
-
-  # Dispatches a table flip request to the game server.
   defp call_game(socket, {:flip_table_card, card_id}) do
-    GameServer.flip_table_card(socket.assigns.game_code, card_id)
-  end
-
-  # Dispatches a discard quirk toggle to the game server.
-  defp call_game(socket, :toggle_discard_quirk) do
-    GameServer.toggle_discard_quirk(socket.assigns.game_code)
+    GameServer.flip_table_card(socket.assigns.game_code, socket.assigns.player_id, card_id)
   end
 
   # Dispatches a discard shuffle request to the game server.
   defp call_game(socket, :shuffle_discard_into_deck) do
     GameServer.shuffle_discard_into_deck(socket.assigns.game_code)
+  end
+
+  defp call_game(socket, :shuffle_quirk_discard_into_deck) do
+    GameServer.shuffle_quirk_discard_into_deck(socket.assigns.game_code)
   end
 
   # Dispatches a deck restart request to the game server.
@@ -229,6 +219,10 @@ defmodule CardtableWeb.GameChannel do
   defp to_atom_zone("discard"), do: :discard
   defp to_atom_zone("deck"), do: :deck
   defp to_atom_zone(_), do: :hand
+
+  defp to_atom_deck("quirk"), do: :quirk
+  defp to_atom_deck(:quirk), do: :quirk
+  defp to_atom_deck(_), do: :fish
 
   # Fetches the latest game state for the current player.
   defp sync_state(socket) do

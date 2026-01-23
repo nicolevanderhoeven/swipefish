@@ -31,6 +31,11 @@ defmodule Cardtable.GameServer do
     GenServer.call(via(code), {:draw, player_id, to_zone})
   end
 
+  @doc "Draws a card from a specific deck (fish or quirk) into the player's hand or onto the table."
+  def draw(code, player_id, deck, to_zone) when deck in [:fish, :quirk] do
+    GenServer.call(via(code), {:draw, player_id, deck, to_zone})
+  end
+
   @doc "Moves a card between zones, optionally targeting another player."
   def move_card(code, player_id, card_id, from_zone, to_zone, target_player_id) do
     GenServer.call(via(code), {:move_card, player_id, card_id, from_zone, to_zone, target_player_id})
@@ -41,24 +46,19 @@ defmodule Cardtable.GameServer do
     GenServer.call(via(code), {:steal_random, player_id, from_player_id, to_zone})
   end
 
-  @doc "Updates a card's free-form position on the table."
-  def set_table_position(code, card_id, position) do
-    GenServer.call(via(code), {:set_table_position, card_id, position})
-  end
-
-  @doc "Cycles a table card's face state."
-  def flip_table_card(code, card_id) do
-    GenServer.call(via(code), {:flip_table_card, card_id})
-  end
-
-  @doc "Toggles quirk visibility for the top discard card."
-  def toggle_discard_quirk(code) do
-    GenServer.call(via(code), :toggle_discard_quirk)
+  @doc "Flips a table card between face-down and face-up."
+  def flip_table_card(code, player_id, card_id) do
+    GenServer.call(via(code), {:flip_table_card, player_id, card_id})
   end
 
   @doc "Shuffles the discard pile into a fresh deck."
   def shuffle_discard_into_deck(code) do
     GenServer.call(via(code), :shuffle_discard_into_deck)
+  end
+
+  @doc "Shuffles the quirk discard pile into a fresh quirk deck."
+  def shuffle_quirk_discard_into_deck(code) do
+    GenServer.call(via(code), :shuffle_quirk_discard_into_deck)
   end
 
   @doc "Rebuilds the deck while keeping the current player roster."
@@ -153,6 +153,16 @@ defmodule Cardtable.GameServer do
     end
   end
 
+  def handle_call({:draw, player_id, deck, to_zone}, _from, state) do
+    case Game.draw(state.game, player_id, deck, to_zone) do
+      {:ok, game} ->
+        {:reply, {:ok, game, player_id, state.available_decks}, %{state | game: game}}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+    end
+  end
+
   def handle_call({:move_card, player_id, card_id, from_zone, to_zone, target_player_id}, _from, state) do
     case Game.move_card(state.game, player_id, card_id, from_zone, to_zone, target_player_id) do
       {:ok, game} ->
@@ -173,30 +183,10 @@ defmodule Cardtable.GameServer do
     end
   end
 
-  def handle_call({:set_table_position, card_id, position}, _from, state) do
-    case Game.set_table_position(state.game, card_id, position) do
-      {:ok, game} ->
-        {:reply, {:ok, game, nil, state.available_decks}, %{state | game: game}}
-
-      {:error, reason} ->
-        {:reply, {:error, reason}, state}
-    end
-  end
-
-  def handle_call({:flip_table_card, card_id}, _from, state) do
+  def handle_call({:flip_table_card, player_id, card_id}, _from, state) do
     case Game.flip_table_card(state.game, card_id) do
       {:ok, game} ->
-        {:reply, {:ok, game, nil, state.available_decks}, %{state | game: game}}
-
-      {:error, reason} ->
-        {:reply, {:error, reason}, state}
-    end
-  end
-
-  def handle_call(:toggle_discard_quirk, _from, state) do
-    case Game.toggle_discard_quirk(state.game) do
-      {:ok, game} ->
-        {:reply, {:ok, game, nil, state.available_decks}, %{state | game: game}}
+        {:reply, {:ok, game, player_id, state.available_decks}, %{state | game: game}}
 
       {:error, reason} ->
         {:reply, {:error, reason}, state}
@@ -205,6 +195,16 @@ defmodule Cardtable.GameServer do
 
   def handle_call(:shuffle_discard_into_deck, _from, state) do
     case Game.shuffle_discard_into_deck(state.game) do
+      {:ok, game} ->
+        {:reply, {:ok, game, nil, state.available_decks}, %{state | game: game}}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+    end
+  end
+
+  def handle_call(:shuffle_quirk_discard_into_deck, _from, state) do
+    case Game.shuffle_quirk_discard_into_deck(state.game) do
       {:ok, game} ->
         {:reply, {:ok, game, nil, state.available_decks}, %{state | game: game}}
 

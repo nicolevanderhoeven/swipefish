@@ -13,6 +13,7 @@ defmodule CardtableWeb.LayoutController do
       [
         ":root {",
         "  --card-height-r: #{float_param(params, :cardHeightR, 0.28)};",
+        "  --card-text-scale: #{float_param(params, :cardTextScale, 1)};",
         "  --hand-center-r: #{float_param(params, :handCenterR, 0)};",
         "  --hand-distance-r: #{float_param(params, :handDistanceR, 1)};",
         "  --hand-angle: #{float_param(params, :handAngle, 8)};",
@@ -21,6 +22,7 @@ defmodule CardtableWeb.LayoutController do
         "  --pile-gap-r: #{float_param(params, :pileGapR, 0.9)};",
         "  --pile-scale: #{float_param(params, :pileScale, 0.75)};",
         "  --table-row-r: #{float_param(params, :tableRowR, 0)};",
+        "  --table-card-gap: #{float_param(params, :tableCardGap, 0.6)};",
         "  --table-circle: #{float_param(params, :tableCircle, 1)};",
         "}",
         ""

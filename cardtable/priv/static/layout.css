@@ -1,12 +1,14 @@
 :root {
-  --card-height-r: 0.53;
+  --card-height-r: 0.48;
+  --card-text-scale: 0.85;
   --hand-center-r: -1;
   --hand-distance-r: 2;
-  --hand-angle: 11;
+  --hand-angle: 10;
   --quirk-offset-r: 0.18;
-  --pile-up-r: 0.55;
+  --pile-up-r: 0.5;
   --pile-gap-r: 0;
   --pile-scale: 0.9;
   --table-row-r: 0;
+  --table-card-gap: 0;
   --table-circle: 1;
 }
