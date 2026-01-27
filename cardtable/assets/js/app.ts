@@ -537,6 +537,9 @@ const renderCardModal = () => {
       });
     });
   } else if (modalState.zone === "table") {
+    addAction("Flip", () => {
+      state.channel?.push("game:flip_table_card", { card_id: cards[resolvedIndex].card_id });
+    });
     addAction("To hand", () => {
       state.channel?.push("game:move_card", {
         card_id: cards[resolvedIndex].card_id,
@@ -802,10 +805,16 @@ const render = () => {
     const rowWrap = document.createElement("div");
     rowWrap.className = "table-row";
 
+    const label = document.createElement("div");
+    label.className = "table-row-label";
+    const player = playersById.get(row.player_id);
+    label.textContent = player ? player.name : row.player_id;
+
     const cardsWrap = document.createElement("div");
     cardsWrap.className = "table-row-cards";
     row.cards.forEach((card) => cardsWrap.appendChild(renderTableCard(card)));
 
+    rowWrap.appendChild(label);
     rowWrap.appendChild(cardsWrap);
     ui.table.appendChild(rowWrap);
   });
@@ -1429,6 +1438,9 @@ const setupTouchDrag = () => {
   let touchStartX = 0;
   let touchStartY = 0;
   let dragPreview: HTMLElement | null = null;
+  let touchDragging = false;
+  const DRAG_START_PX = 8;
+  const tableZoneEl = document.querySelector(".table-zone") as HTMLElement | null;
 
   const createDragPreview = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
@@ -1448,7 +1460,8 @@ const setupTouchDrag = () => {
 
   const getDropZone = (x: number, y: number): "hand" | "table" | "discard" | null => {
     const handRect = ui.hand.getBoundingClientRect();
-    const tableRect = ui.table.getBoundingClientRect();
+    // Use the full visible table area, not just the inner #table cards container.
+    const tableRect = (tableZoneEl ?? ui.table).getBoundingClientRect();
     const fishDiscardRect = ui.discardPile.getBoundingClientRect();
     const quirkDiscardRect = ui.quirkDiscardPile.getBoundingClientRect();
 
@@ -1468,6 +1481,13 @@ const setupTouchDrag = () => {
   };
 
   const handleTouchStart = (e: TouchEvent) => {
+    // If a second finger comes down while dragging (e.g. scroll/zoom gesture),
+    // aggressively cancel the drag so the preview cannot get stranded.
+    if ((touchDragging || dragState.active || dragPreview) && e.touches.length > 1) {
+      cleanup();
+      return;
+    }
+
     const target = e.target as HTMLElement;
     const card = target.closest(".card[draggable='true']") as HTMLElement | null;
     const discardCard =
@@ -1484,27 +1504,46 @@ const setupTouchDrag = () => {
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
     touchStartElement = element;
+    touchDragging = false;
     touchStartCardId =
       element.dataset.cardId || (element.id === "draw-card" || element.id === "draw-quirk-card" ? "deck" : null);
     touchStartZone = (element.dataset.fromZone as "hand" | "table" | "discard" | "deck") || null;
-
-    if ((touchStartCardId || touchStartZone === "deck") && touchStartZone) {
-      dragState.active = true;
-      dragState.cardId = touchStartCardId;
-      dragState.fromZone = touchStartZone;
-      dragState.fromDeck = element.id === "draw-quirk-card" ? "quirk" : element.id === "draw-card" ? "fish" : dragState.fromDeck;
-      element.classList.add("dragging");
-      dragPreview = createDragPreview(element);
-    }
   };
 
   const handleTouchMove = (e: TouchEvent) => {
-    if (!dragState.active || !dragPreview) return;
+    // Multi-touch while dragging typically indicates scroll/zoom; cancel to avoid stuck preview.
+    if ((touchDragging || dragState.active || dragPreview) && e.touches.length > 1) {
+      cleanup();
+      return;
+    }
 
-    e.preventDefault();
     const touch = e.touches[0];
     const deltaX = touch.clientX - touchStartX;
     const deltaY = touch.clientY - touchStartY;
+
+    // Don't treat taps as drags. This prevents "tap to open modal" from
+    // triggering table→table flip on mobile.
+    if (!touchDragging) {
+      if (!touchStartElement || !touchStartZone || !touchStartCardId) return;
+      if (Math.hypot(deltaX, deltaY) < DRAG_START_PX) return;
+
+      touchDragging = true;
+      dragState.active = true;
+      dragState.cardId = touchStartCardId;
+      dragState.fromZone = touchStartZone;
+      dragState.fromDeck =
+        touchStartElement.id === "draw-quirk-card"
+          ? "quirk"
+          : touchStartElement.id === "draw-card"
+            ? "fish"
+            : dragState.fromDeck;
+      touchStartElement.classList.add("dragging");
+      dragPreview = createDragPreview(touchStartElement);
+    }
+
+    if (!dragState.active || !dragPreview) return;
+
+    e.preventDefault();
 
     dragPreview.style.left = `${touch.clientX - dragPreview.offsetWidth / 2}px`;
     dragPreview.style.top = `${touch.clientY - dragPreview.offsetHeight / 2}px`;
@@ -1533,6 +1572,12 @@ const setupTouchDrag = () => {
   };
 
   const handleTouchEnd = (e: TouchEvent) => {
+    // If we never crossed the drag threshold, treat it as a tap and let the
+    // normal click handler open the modal (no flip/move side-effects).
+    if (!touchDragging) {
+      cleanup();
+      return;
+    }
     if (!dragState.active || !touchStartCardId || !touchStartZone) {
       cleanup();
       return;
@@ -1552,6 +1597,10 @@ const setupTouchDrag = () => {
           dragState.pendingDiscardDraw = deck;
           state.channel?.push("game:draw", { deck, to_zone: "hand" });
         }
+      }
+      else if (touchStartZone === "table" && dropZone === "table") {
+        // Table -> table flips on touch devices (mobile browsers often don't fire native DnD).
+        state.channel?.push("game:flip_table_card", { card_id: touchStartCardId });
       }
       else if (touchStartZone !== dropZone) {
         // Move card to different zone
@@ -1584,6 +1633,7 @@ const setupTouchDrag = () => {
     touchStartElement = null;
     touchStartZone = null;
     touchStartCardId = null;
+    touchDragging = false;
   };
 
   // Add touch listeners to the board
@@ -1591,6 +1641,25 @@ const setupTouchDrag = () => {
   ui.board.addEventListener("touchmove", handleTouchMove, { passive: false });
   ui.board.addEventListener("touchend", handleTouchEnd, { passive: false });
   ui.board.addEventListener("touchcancel", cleanup, { passive: false });
+
+  // Defensive cleanup: mobile browsers can drop touchend/cancel during scroll,
+  // gesture navigation, losing focus, or other interruptions.
+  const cleanupIfDragging = () => {
+    if (touchDragging || dragPreview || dragState.active) cleanup();
+  };
+
+  window.addEventListener(
+    "touchend",
+    (e) => {
+      if (!touchDragging && !dragPreview && !dragState.active) return;
+      handleTouchEnd(e);
+    },
+    { passive: false, capture: true }
+  );
+  window.addEventListener("touchcancel", cleanupIfDragging, { passive: true, capture: true });
+  window.addEventListener("scroll", cleanupIfDragging, { passive: true, capture: true });
+  window.addEventListener("blur", cleanupIfDragging, { passive: true });
+  document.addEventListener("visibilitychange", cleanupIfDragging, { passive: true });
 };
 
 setupDropZones();

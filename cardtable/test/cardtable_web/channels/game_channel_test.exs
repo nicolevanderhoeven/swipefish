@@ -44,7 +44,9 @@ defmodule CardtableWeb.GameChannelTest do
         {public_state, private_state}
       end)
 
-    {:ok, game_after_draw1, _player_id, available_decks1} = GameServer.sync(code, reply1.player_id)
+    {:ok, game_after_draw1, _player_id, available_decks1} =
+      GameServer.sync(code, reply1.player_id)
+
     public_after_draw1 = Game.public_state(game_after_draw1, available_decks1)
     private_after_draw1 = Game.private_state(game_after_draw1, reply1.player_id)
 
@@ -63,7 +65,9 @@ defmodule CardtableWeb.GameChannelTest do
     assert_broadcast "game:public_update", %{public_state: _public_after_table}
     assert_push "game:private_update", %{private_state: _private_after_table}
 
-    {:ok, game_after_table1, _player_id, available_decks_table1} = GameServer.sync(code, reply1.player_id)
+    {:ok, game_after_table1, _player_id, available_decks_table1} =
+      GameServer.sync(code, reply1.player_id)
+
     public_after_table1 = Game.public_state(game_after_table1, available_decks_table1)
     private_after_table1 = Game.private_state(game_after_table1, reply1.player_id)
 
@@ -76,7 +80,9 @@ defmodule CardtableWeb.GameChannelTest do
     assert_broadcast "game:public_update", %{public_state: _public_after_flip}
     assert_push "game:private_update", %{private_state: _private_after_flip}
 
-    {:ok, game_after_flip1, _player_id, available_decks_flip1} = GameServer.sync(code, reply1.player_id)
+    {:ok, game_after_flip1, _player_id, available_decks_flip1} =
+      GameServer.sync(code, reply1.player_id)
+
     public_after_flip1 = Game.public_state(game_after_flip1, available_decks_flip1)
     assert table_face_state?(public_after_flip1.table, card1.card_id, "up")
 
@@ -97,7 +103,9 @@ defmodule CardtableWeb.GameChannelTest do
     push(socket1, "game:update_name", %{"name" => "Player One"})
     assert_broadcast "game:public_update", %{public_state: _public_after_name}
 
-    {game_after_name, available_decks_name} = await_player_name(code, reply2.player_id, reply1.player_id, "Player One")
+    {game_after_name, available_decks_name} =
+      await_player_name(code, reply2.player_id, reply1.player_id, "Player One")
+
     public_after_name = Game.public_state(game_after_name, available_decks_name)
     assert Enum.any?(public_after_name.players, &(&1.name == "Player One"))
 
@@ -144,7 +152,9 @@ defmodule CardtableWeb.GameChannelTest do
     assert_broadcast "game:public_update", %{public_state: _public_after_take}
     assert_push "game:private_update", %{private_state: _private_after_take}
 
-    {game_after_take, available_decks_after_take} = await_fish_hand_count(code, reply1.player_id, 5)
+    {game_after_take, available_decks_after_take} =
+      await_fish_hand_count(code, reply1.player_id, 5)
+
     public_after_take = Game.public_state(game_after_take, available_decks_after_take)
     private_after_take = Game.private_state(game_after_take, reply1.player_id)
 
@@ -178,10 +188,13 @@ defmodule CardtableWeb.GameChannelTest do
     })
 
     assert_broadcast "game:public_update", %{public_state: _public_after_discard_to_table}
+
     {game_after_discard_to_table, available_decks_discard_to_table} =
       await_table_contains(code, reply1.player_id, discard_card_id)
 
-    public_after_discard_to_table = Game.public_state(game_after_discard_to_table, available_decks_discard_to_table)
+    public_after_discard_to_table =
+      Game.public_state(game_after_discard_to_table, available_decks_discard_to_table)
+
     assert table_contains_any?(public_after_discard_to_table.table, discard_card_id)
 
     push(socket1, "game:move_card", %{
@@ -191,10 +204,13 @@ defmodule CardtableWeb.GameChannelTest do
     })
 
     assert_broadcast "game:public_update", %{public_state: _public_after_table_to_discard}
+
     {game_after_table_to_discard, available_decks_table_to_discard} =
       await_fish_discard_top(code, reply1.player_id)
 
-    public_after_table_to_discard = Game.public_state(game_after_table_to_discard, available_decks_table_to_discard)
+    public_after_table_to_discard =
+      Game.public_state(game_after_table_to_discard, available_decks_table_to_discard)
+
     assert public_after_table_to_discard.fish_discard_top
     assert public_after_table_to_discard.fish_discard_top.card_id == discard_card_id
 
@@ -205,10 +221,13 @@ defmodule CardtableWeb.GameChannelTest do
     })
 
     assert_broadcast "game:public_update", %{public_state: _public_after_discard_to_hand}
+
     {game_after_discard_to_hand, _available_decks_discard_to_hand} =
       await_hand_contains(code, reply1.player_id, discard_card_id)
 
-    private_after_discard_to_hand = Game.private_state(game_after_discard_to_hand, reply1.player_id)
+    private_after_discard_to_hand =
+      Game.private_state(game_after_discard_to_hand, reply1.player_id)
+
     assert Enum.any?(private_after_discard_to_hand.fish_hand, &(&1.card_id == discard_card_id))
 
     player1 = Enum.find(public_after_discard.players, &(&1.id == reply1.player_id))
@@ -285,7 +304,11 @@ defmodule CardtableWeb.GameChannelTest do
 
       true ->
         Process.sleep(delay_ms)
-        await_fish_hand_count(code, player_id, expected_count, attempts: attempts - 1, delay_ms: delay_ms)
+
+        await_fish_hand_count(code, player_id, expected_count,
+          attempts: attempts - 1,
+          delay_ms: delay_ms
+        )
     end
   end
 
@@ -296,14 +319,19 @@ defmodule CardtableWeb.GameChannelTest do
 
     {:ok, game, _player_id, available_decks} = GameServer.sync(code, player_id)
     private_state = Game.private_state(game, player_id)
-    present? = Enum.any?(private_state.fish_hand, &(&1.card_id == card_id)) or Enum.any?(private_state.quirk_hand, &(&1.card_id == card_id))
+
+    present? =
+      Enum.any?(private_state.fish_hand, &(&1.card_id == card_id)) or
+        Enum.any?(private_state.quirk_hand, &(&1.card_id == card_id))
 
     cond do
       present? ->
         {game, available_decks}
 
       attempts <= 1 ->
-        flunk("Expected hand to include card #{card_id}, but it was missing after #{attempts} attempts.")
+        flunk(
+          "Expected hand to include card #{card_id}, but it was missing after #{attempts} attempts."
+        )
 
       true ->
         Process.sleep(delay_ms)
@@ -331,7 +359,11 @@ defmodule CardtableWeb.GameChannelTest do
 
       true ->
         Process.sleep(delay_ms)
-        await_player_name(code, player_id, target_player_id, expected_name, attempts: attempts - 1, delay_ms: delay_ms)
+
+        await_player_name(code, player_id, target_player_id, expected_name,
+          attempts: attempts - 1,
+          delay_ms: delay_ms
+        )
     end
   end
 
@@ -395,7 +427,9 @@ defmodule CardtableWeb.GameChannelTest do
 
   defp table_face_state?(table_rows, card_id, expected) do
     Enum.any?(table_rows, fn row ->
-      Enum.any?(row.cards, fn c -> c.card_id == card_id and Map.get(c, :face_state) == expected end)
+      Enum.any?(row.cards, fn c ->
+        c.card_id == card_id and Map.get(c, :face_state) == expected
+      end)
     end)
   end
 end

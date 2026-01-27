@@ -18,6 +18,7 @@ defmodule Cardtable.Decks do
         entries
         |> Enum.filter(&deck_dir?(type, &1))
         |> Enum.sort()
+
       {:error, _} ->
         []
     end

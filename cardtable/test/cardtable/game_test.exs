@@ -31,7 +31,9 @@ defmodule Cardtable.GameTest do
   end
 
   test "draw can target the quirk deck" do
-    game = Game.new("TEST", "sample", "sample-quirks", sample_cards(), sample_quirks(), shuffle: false)
+    game =
+      Game.new("TEST", "sample", "sample-quirks", sample_cards(), sample_quirks(), shuffle: false)
+
     game = Game.add_player(game, "p1", "Player 1")
 
     assert length(game.quirk_deck) == 2
@@ -42,7 +44,9 @@ defmodule Cardtable.GameTest do
   end
 
   test "move card from hand to table puts it into the player's table row" do
-    game = Game.new("TEST", "sample", "sample-quirks", sample_cards(), sample_quirks(), shuffle: false)
+    game =
+      Game.new("TEST", "sample", "sample-quirks", sample_cards(), sample_quirks(), shuffle: false)
+
     game = Game.add_player(game, "p1", "Player 1")
     {:ok, game} = Game.draw(game, "p1", :hand)
 
@@ -60,7 +64,10 @@ defmodule Cardtable.GameTest do
 
     {:ok, game} = Game.flip_table_card(game, card_id)
     public2 = Game.public_state(game, %{cards: [], quirks: []})
-    table_card2 = public2.table |> hd() |> Map.fetch!(:cards) |> Enum.find(&(&1.card_id == card_id))
+
+    table_card2 =
+      public2.table |> hd() |> Map.fetch!(:cards) |> Enum.find(&(&1.card_id == card_id))
+
     assert table_card2.face_state == "up"
     assert table_card2.face
   end
@@ -68,7 +75,9 @@ defmodule Cardtable.GameTest do
   test "steal random removes a card from another hand" do
     :rand.seed(:exsplus, {1, 2, 3})
 
-    game = Game.new("TEST", "sample", "sample-quirks", sample_cards(), sample_quirks(), shuffle: false)
+    game =
+      Game.new("TEST", "sample", "sample-quirks", sample_cards(), sample_quirks(), shuffle: false)
+
     game = Game.add_player(game, "p1", "Player 1")
     game = Game.add_player(game, "p2", "Player 2")
 

@@ -65,15 +65,27 @@ defmodule Cardtable.Game do
     fish_hands = Map.put_new(game.fish_hands, player_id, [])
     quirk_hands = Map.put_new(game.quirk_hands, player_id, [])
     table_rows = Map.put_new(game.table_rows, player_id, [])
-    %{game | players: players, fish_hands: fish_hands, quirk_hands: quirk_hands, table_rows: table_rows}
+
+    %{
+      game
+      | players: players,
+        fish_hands: fish_hands,
+        quirk_hands: quirk_hands,
+        table_rows: table_rows
+    }
   end
 
   @doc "Updates a player's connected status for presence tracking."
   def mark_connected(game, player_id, connected) do
     players =
-      Map.update(game.players, player_id, %{id: player_id, name: "Player", connected: connected}, fn player ->
-        %{player | connected: connected}
-      end)
+      Map.update(
+        game.players,
+        player_id,
+        %{id: player_id, name: "Player", connected: connected},
+        fn player ->
+          %{player | connected: connected}
+        end
+      )
 
     %{game | players: players}
   end
@@ -81,9 +93,14 @@ defmodule Cardtable.Game do
   @doc "Updates a player's display name in the game state."
   def update_player_name(game, player_id, name) do
     players =
-      Map.update(game.players, player_id, %{id: player_id, name: name, connected: true}, fn player ->
-        %{player | name: name}
-      end)
+      Map.update(
+        game.players,
+        player_id,
+        %{id: player_id, name: name, connected: true},
+        fn player ->
+          %{player | name: name}
+        end
+      )
 
     %{game | players: players}
   end
@@ -98,7 +115,8 @@ defmodule Cardtable.Game do
   end
 
   @doc "Draws the top card from a specific deck into a player's hand or onto the table."
-  def draw(game, player_id, deck, to_zone) when deck in [:fish, :quirk] and to_zone in [:hand, :table] do
+  def draw(game, player_id, deck, to_zone)
+      when deck in [:fish, :quirk] and to_zone in [:hand, :table] do
     {pile, key} = deck_pile(game, deck)
 
     case pile do
@@ -189,7 +207,9 @@ defmodule Cardtable.Game do
 
   @doc "Rebuilds both decks while keeping the same player roster."
   def restart(game, deck_set, quirk_set, fish_defs, quirk_defs, deck_back_image) do
-    new_game = new(game.code, deck_set, quirk_set, fish_defs, quirk_defs, deck_back_image: deck_back_image)
+    new_game =
+      new(game.code, deck_set, quirk_set, fish_defs, quirk_defs, deck_back_image: deck_back_image)
+
     player_ids = Map.keys(game.players)
 
     %{
@@ -267,7 +287,9 @@ defmodule Cardtable.Game do
         %{game | fish_hands: hands}
 
       %{type: :quirk} ->
-        hands = Map.update(game.quirk_hands, player_id, [card_id], fn hand -> [card_id | hand] end)
+        hands =
+          Map.update(game.quirk_hands, player_id, [card_id], fn hand -> [card_id | hand] end)
+
         %{game | quirk_hands: hands}
 
       _ ->
@@ -388,7 +410,8 @@ defmodule Cardtable.Game do
     end
   end
 
-  defp add_to_zone(_game, _player_id, _card_id, _to_zone, _target_player_id), do: {:error, :action_not_allowed}
+  defp add_to_zone(_game, _player_id, _card_id, _to_zone, _target_player_id),
+    do: {:error, :action_not_allowed}
 
   defp discard_top(game, type) when type in [:fish, :quirk] do
     {pile, _key} = discard_pile(game, type)
@@ -439,7 +462,14 @@ defmodule Cardtable.Game do
     |> Enum.map(fn player ->
       fish_count = length(Map.get(game.fish_hands, player.id, []))
       quirk_count = length(Map.get(game.quirk_hands, player.id, []))
-      %{id: player.id, name: player.name, fish_hand_count: fish_count, quirk_hand_count: quirk_count, connected: player.connected}
+
+      %{
+        id: player.id,
+        name: player.name,
+        fish_hand_count: fish_count,
+        quirk_hand_count: quirk_count,
+        connected: player.connected
+      }
     end)
     |> Enum.sort_by(& &1.name)
   end

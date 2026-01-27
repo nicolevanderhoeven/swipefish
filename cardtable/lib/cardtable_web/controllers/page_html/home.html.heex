@@ -54,7 +54,9 @@
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-xl font-semibold">Live table</h2>
-          <p class="text-sm text-slate-400">Drag and drop coming soon. Use the buttons for now.</p>
+          <p class="text-sm text-slate-400">
+            Drag and drop coming soon. Use the buttons for now.
+          </p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button
@@ -70,7 +72,11 @@
       <div class="flex flex-wrap items-center gap-2 text-sm text-slate-400">
         <span>Share link:</span>
         <a id="game-link" class="break-all text-emerald-200 underline" href="#"></a>
-        <button id="copy-game-link" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200" type="button">
+        <button
+          id="copy-game-link"
+          class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200"
+          type="button"
+        >
           Copy
         </button>
       </div>
@@ -80,7 +86,11 @@
         <div id="game-sidebar" class="game-sidebar">
           <div class="flex items-center justify-between">
             <div class="text-xs uppercase tracking-wide text-slate-400">Game menu</div>
-            <button id="close-sidebar" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200" type="button">
+            <button
+              id="close-sidebar"
+              class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200"
+              type="button"
+            >
               Close
             </button>
           </div>
@@ -93,12 +103,18 @@
             <div class="mt-3 space-y-3 text-sm">
               <label class="block">
                 <span class="text-xs text-slate-400">Card deck</span>
-                <select id="deck-select" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2">
+                <select
+                  id="deck-select"
+                  class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2"
+                >
                 </select>
               </label>
               <label class="block">
                 <span class="text-xs text-slate-400">Quirk deck</span>
-                <select id="quirk-select" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2">
+                <select
+                  id="quirk-select"
+                  class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-2"
+                >
                 </select>
               </label>
             </div>
@@ -134,27 +150,74 @@
             <div class="mt-3 space-y-3 text-xs text-slate-300">
               <label class="block">
                 <span>Card height (R): <span id="card-height-r-value">0.28</span></span>
-                <input id="card-height-r" type="range" min="0.15" max="0.6" value="0.28" step="0.01" class="mt-2 w-full" />
+                <input
+                  id="card-height-r"
+                  type="range"
+                  min="0.15"
+                  max="0.6"
+                  value="0.28"
+                  step="0.01"
+                  class="mt-2 w-full"
+                />
               </label>
               <label class="block">
                 <span>Text scale: <span id="card-text-scale-value">1.00</span></span>
-                <input id="card-text-scale" type="range" min="0.6" max="1.6" value="1" step="0.05" class="mt-2 w-full" />
+                <input
+                  id="card-text-scale"
+                  type="range"
+                  min="0.6"
+                  max="1.6"
+                  value="1"
+                  step="0.05"
+                  class="mt-2 w-full"
+                />
               </label>
               <label class="block">
                 <span>Fan center (R): <span id="hand-center-r-value">0</span></span>
-                <input id="hand-center-r" type="range" min="-1" max="2" value="0" step="0.05" class="mt-2 w-full" />
+                <input
+                  id="hand-center-r"
+                  type="range"
+                  min="-1"
+                  max="2"
+                  value="0"
+                  step="0.05"
+                  class="mt-2 w-full"
+                />
               </label>
               <label class="block">
                 <span>Card distance (R): <span id="hand-distance-r-value">1</span></span>
-                <input id="hand-distance-r" type="range" min="-1" max="2" value="1" step="0.05" class="mt-2 w-full" />
+                <input
+                  id="hand-distance-r"
+                  type="range"
+                  min="-1"
+                  max="2"
+                  value="1"
+                  step="0.05"
+                  class="mt-2 w-full"
+                />
               </label>
               <label class="block">
                 <span>Angular separation (deg): <span id="hand-angle-value">8</span></span>
-                <input id="hand-angle" type="range" min="0" max="45" value="8" class="mt-2 w-full" />
+                <input
+                  id="hand-angle"
+                  type="range"
+                  min="0"
+                  max="45"
+                  value="8"
+                  class="mt-2 w-full"
+                />
               </label>
               <label class="block">
                 <span>Quirk offset (R): <span id="quirk-offset-r-value">0.18</span></span>
-                <input id="quirk-offset-r" type="range" min="-0.2" max="0.4" value="0.18" step="0.01" class="mt-2 w-full" />
+                <input
+                  id="quirk-offset-r"
+                  type="range"
+                  min="-0.2"
+                  max="0.4"
+                  value="0.18"
+                  step="0.01"
+                  class="mt-2 w-full"
+                />
               </label>
             </div>
           </div>
@@ -163,23 +226,63 @@
             <div class="mt-3 space-y-3 text-xs text-slate-300">
               <label class="block">
                 <span>Up from center (R): <span id="pile-up-r-value">0.7</span></span>
-                <input id="pile-up-r" type="range" min="-1" max="2" value="0.7" step="0.05" class="mt-2 w-full" />
+                <input
+                  id="pile-up-r"
+                  type="range"
+                  min="-1"
+                  max="2"
+                  value="0.7"
+                  step="0.05"
+                  class="mt-2 w-full"
+                />
               </label>
               <label class="block">
                 <span>Distance between (R): <span id="pile-gap-r-value">0.9</span></span>
-                <input id="pile-gap-r" type="range" min="0" max="2" value="0.9" step="0.05" class="mt-2 w-full" />
+                <input
+                  id="pile-gap-r"
+                  type="range"
+                  min="0"
+                  max="2"
+                  value="0.9"
+                  step="0.05"
+                  class="mt-2 w-full"
+                />
               </label>
               <label class="block">
                 <span>Pile size (%): <span id="pile-scale-value">0.75</span></span>
-                <input id="pile-scale" type="range" min="0.4" max="1.2" value="0.75" step="0.05" class="mt-2 w-full" />
+                <input
+                  id="pile-scale"
+                  type="range"
+                  min="0.4"
+                  max="1.2"
+                  value="0.75"
+                  step="0.05"
+                  class="mt-2 w-full"
+                />
               </label>
               <label class="block">
                 <span>Table row center (R): <span id="table-row-r-value">0</span></span>
-                <input id="table-row-r" type="range" min="-1" max="2" value="0" step="0.05" class="mt-2 w-full" />
+                <input
+                  id="table-row-r"
+                  type="range"
+                  min="-1"
+                  max="2"
+                  value="0"
+                  step="0.05"
+                  class="mt-2 w-full"
+                />
               </label>
               <label class="block">
                 <span>Table card gap (rem): <span id="table-card-gap-value">0.60</span></span>
-                <input id="table-card-gap" type="range" min="0" max="2" value="0.6" step="0.05" class="mt-2 w-full" />
+                <input
+                  id="table-card-gap"
+                  type="range"
+                  min="0"
+                  max="2"
+                  value="0.6"
+                  step="0.05"
+                  class="mt-2 w-full"
+                />
               </label>
               <label class="flex items-center gap-2">
                 <input id="table-circle" type="checkbox" class="rounded border-slate-700" checked />
@@ -187,10 +290,18 @@
               </label>
             </div>
             <div class="mt-3 flex flex-wrap gap-2">
-              <button id="layout-copy" class="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200" type="button">
+              <button
+                id="layout-copy"
+                class="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200"
+                type="button"
+              >
                 Copy layout CSS
               </button>
-              <button id="layout-download" class="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200" type="button">
+              <button
+                id="layout-download"
+                class="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200"
+                type="button"
+              >
                 Save layout CSS
               </button>
             </div>
@@ -203,7 +314,14 @@
 
             <div id="board" class="board">
               <svg class="board-surface" viewBox="0 0 100 100" aria-hidden="true">
-                <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(148,163,184,0.35)" stroke-width="0.6" />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="48"
+                  fill="none"
+                  stroke="rgba(148,163,184,0.35)"
+                  stroke-width="0.6"
+                />
               </svg>
 
               <div id="hand" class="hand"></div>
@@ -262,8 +380,14 @@
               <div id="table-modal-overlay" class="table-modal-overlay"></div>
               <div class="table-modal-card">
                 <div class="table-modal-header">
-                  <div class="text-xs uppercase tracking-wide text-slate-400">All table cards</div>
-                  <button id="table-modal-close" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200" type="button">
+                  <div class="text-xs uppercase tracking-wide text-slate-400">
+                    All table cards
+                  </div>
+                  <button
+                    id="table-modal-close"
+                    class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200"
+                    type="button"
+                  >
                     Close
                   </button>
                 </div>
@@ -276,7 +400,11 @@
               <div class="card-modal-card">
                 <div class="card-modal-header">
                   <div class="text-xs uppercase tracking-wide text-slate-400">Card</div>
-                  <button id="card-modal-close" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200" type="button">
+                  <button
+                    id="card-modal-close"
+                    class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200"
+                    type="button"
+                  >
                     Close
                   </button>
                 </div>

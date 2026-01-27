@@ -38,7 +38,10 @@ defmodule Cardtable.GameServer do
 
   @doc "Moves a card between zones, optionally targeting another player."
   def move_card(code, player_id, card_id, from_zone, to_zone, target_player_id) do
-    GenServer.call(via(code), {:move_card, player_id, card_id, from_zone, to_zone, target_player_id})
+    GenServer.call(
+      via(code),
+      {:move_card, player_id, card_id, from_zone, to_zone, target_player_id}
+    )
   end
 
   @doc "Steals a random card from another player into a target zone."
@@ -95,6 +98,7 @@ defmodule Cardtable.GameServer do
           other ->
             other
         end
+
       _ ->
         {:ok, :already_started}
     end
@@ -127,6 +131,7 @@ defmodule Cardtable.GameServer do
       end
 
     player_tokens = Map.put(state.player_tokens, token, player_id)
+
     next_player_id =
       if increment? do
         state.next_player_id + 1
@@ -163,7 +168,11 @@ defmodule Cardtable.GameServer do
     end
   end
 
-  def handle_call({:move_card, player_id, card_id, from_zone, to_zone, target_player_id}, _from, state) do
+  def handle_call(
+        {:move_card, player_id, card_id, from_zone, to_zone, target_player_id},
+        _from,
+        state
+      ) do
     case Game.move_card(state.game, player_id, card_id, from_zone, to_zone, target_player_id) do
       {:ok, game} ->
         {:reply, {:ok, game, player_id, state.available_decks}, %{state | game: game}}
@@ -217,7 +226,14 @@ defmodule Cardtable.GameServer do
     with {:ok, card_deck} <- Decks.load_deck(:cards, deck_set),
          {:ok, quirk_defs} <- load_quirks(quirk_set) do
       game =
-        Game.restart(state.game, deck_set, quirk_set, card_deck.cards, quirk_defs, card_deck.back_image)
+        Game.restart(
+          state.game,
+          deck_set,
+          quirk_set,
+          card_deck.cards,
+          quirk_defs,
+          card_deck.back_image
+        )
 
       {:reply, {:ok, game, nil, state.available_decks}, %{state | game: game}}
     else
@@ -249,7 +265,11 @@ defmodule Cardtable.GameServer do
     {:ok, quirk_defs} = load_quirks(quirk_set)
 
     %{
-      game: Game.new(code, deck_set, quirk_set, card_deck.cards, quirk_defs, shuffle: true, deck_back_image: card_deck.back_image),
+      game:
+        Game.new(code, deck_set, quirk_set, card_deck.cards, quirk_defs,
+          shuffle: true,
+          deck_back_image: card_deck.back_image
+        ),
       player_tokens: %{},
       next_player_id: 1,
       available_decks: %{
@@ -280,5 +300,4 @@ defmodule Cardtable.GameServer do
   defp normalize_name(nil), do: nil
   defp normalize_name(""), do: nil
   defp normalize_name(name), do: String.trim(name)
-
 end

@@ -15,7 +15,8 @@ defmodule CardtableWeb.GameChannel do
   @doc "Joins a game topic and seeds the client with initial state."
   def join("game:" <> code, payload, socket) do
     with {:ok, _} <- GameServer.ensure_started(code),
-         {:ok, player_id, player_token, state} <- GameServer.join(code, payload["player_name"], payload["player_token"]) do
+         {:ok, player_id, player_token, state} <-
+           GameServer.join(code, payload["player_name"], payload["player_token"]) do
       socket = assign(socket, :game_code, code)
       socket = assign(socket, :player_id, player_id)
 
@@ -64,7 +65,11 @@ defmodule CardtableWeb.GameChannel do
 
   def handle_in("game:move_card", payload, socket) do
     with {:ok, game, player_id, available_decks} <-
-           call_game(socket, {:move_card, payload["card_id"], payload["from_zone"], payload["to_zone"], payload["target_player_id"]}) do
+           call_game(
+             socket,
+             {:move_card, payload["card_id"], payload["from_zone"], payload["to_zone"],
+              payload["target_player_id"]}
+           ) do
       broadcast_update(socket, game, available_decks)
       push_private(socket, game, player_id)
       {:noreply, socket}
@@ -73,8 +78,13 @@ defmodule CardtableWeb.GameChannel do
     end
   end
 
-  def handle_in("game:steal_random", %{"from_player_id" => from_player_id, "to_zone" => to_zone}, socket) do
-    with {:ok, game, player_id, available_decks} <- call_game(socket, {:steal_random, from_player_id, to_zone}) do
+  def handle_in(
+        "game:steal_random",
+        %{"from_player_id" => from_player_id, "to_zone" => to_zone},
+        socket
+      ) do
+    with {:ok, game, player_id, available_decks} <-
+           call_game(socket, {:steal_random, from_player_id, to_zone}) do
       broadcast_update(socket, game, available_decks)
       push_private(socket, game, player_id)
       {:noreply, socket}
@@ -103,7 +113,8 @@ defmodule CardtableWeb.GameChannel do
   end
 
   def handle_in("game:shuffle_quirk_discard_into_deck", _payload, socket) do
-    with {:ok, game, _player_id, available_decks} <- call_game(socket, :shuffle_quirk_discard_into_deck) do
+    with {:ok, game, _player_id, available_decks} <-
+           call_game(socket, :shuffle_quirk_discard_into_deck) do
       broadcast_update(socket, game, available_decks)
       {:noreply, socket}
     else
@@ -145,7 +156,13 @@ defmodule CardtableWeb.GameChannel do
   # Defaults deck to fish for backwards compatibility.
   defp call_game(socket, {:draw, deck, to_zone}) do
     deck_atom = to_atom_deck(deck)
-    GameServer.draw(socket.assigns.game_code, socket.assigns.player_id, deck_atom, to_atom_zone(to_zone))
+
+    GameServer.draw(
+      socket.assigns.game_code,
+      socket.assigns.player_id,
+      deck_atom,
+      to_atom_zone(to_zone)
+    )
   end
 
   # Dispatches a move-card request to the game server.
@@ -162,7 +179,12 @@ defmodule CardtableWeb.GameChannel do
 
   # Dispatches a steal request to the game server.
   defp call_game(socket, {:steal_random, from_player_id, to_zone}) do
-    GameServer.steal_random(socket.assigns.game_code, socket.assigns.player_id, from_player_id, to_atom_zone(to_zone))
+    GameServer.steal_random(
+      socket.assigns.game_code,
+      socket.assigns.player_id,
+      from_player_id,
+      to_atom_zone(to_zone)
+    )
   end
 
   defp call_game(socket, {:flip_table_card, card_id}) do
