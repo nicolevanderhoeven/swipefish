@@ -242,7 +242,6 @@ const ui = {
   cardModalPrev: document.getElementById("card-modal-prev") as HTMLButtonElement,
   cardModalNext: document.getElementById("card-modal-next") as HTMLButtonElement,
   players: document.getElementById("players") as HTMLDivElement,
-  playersCompact: document.getElementById("players-compact") as HTMLDivElement,
   drawFishButton: document.getElementById("draw-card") as HTMLButtonElement,
   drawQuirkButton: document.getElementById("draw-quirk-card") as HTMLButtonElement,
   shuffleDiscardButton: document.getElementById("shuffle-discard") as HTMLButtonElement,
@@ -256,6 +255,9 @@ const ui = {
   quirkSelect: document.getElementById("quirk-select") as HTMLSelectElement,
   gameLink: document.getElementById("game-link") as HTMLAnchorElement,
   copyGameLink: document.getElementById("copy-game-link") as HTMLButtonElement,
+  copyGameLinkLabel: document.getElementById("copy-game-link-label") as HTMLSpanElement,
+  topPlayerName: document.getElementById("top-player-name") as HTMLDivElement,
+  topPlayerCount: document.getElementById("top-player-count") as HTMLSpanElement,
   handCenterR: document.getElementById("hand-center-r") as HTMLInputElement,
   handDistanceR: document.getElementById("hand-distance-r") as HTMLInputElement,
   handAngle: document.getElementById("hand-angle") as HTMLInputElement,
@@ -298,7 +300,6 @@ const setGameLink = (code: string) => {
   const url = new URL(window.location.href);
   url.searchParams.set("game", code);
   ui.gameLink.href = url.toString();
-  ui.gameLink.textContent = url.toString();
   window.history.replaceState({}, "", url.toString());
 };
 
@@ -790,13 +791,8 @@ const render = () => {
 
   renderPlayers(ui.players, true, false);
   const me = players.find((p) => p.id === state.playerId);
-  ui.playersCompact.innerHTML = "";
-  if (me) {
-    const summary = document.createElement("div");
-    summary.className = "players-compact-summary";
-    summary.textContent = `${me.name}: ${me.fish_hand_count} Fish, ${me.quirk_hand_count} Quirks`;
-    ui.playersCompact.appendChild(summary);
-  }
+  ui.topPlayerName.textContent = me?.name || "";
+  ui.topPlayerCount.textContent = String(players.length);
 
   const playersById = new Map(state.publicState.players.map((p) => [p.id, p]));
   const tableRows = state.publicState.table || [];
@@ -1144,12 +1140,12 @@ ui.cardModalNext.addEventListener("click", () => {
 });
 
 ui.copyGameLink.addEventListener("click", async () => {
-  const url = ui.gameLink.textContent || "";
+  const url = ui.gameLink.href || "";
   if (!url) return;
   await navigator.clipboard.writeText(url);
-  ui.copyGameLink.textContent = "Copied!";
+  ui.copyGameLinkLabel.textContent = "Copied!";
   setTimeout(() => {
-    ui.copyGameLink.textContent = "Copy";
+    ui.copyGameLinkLabel.textContent = "Copy";
   }, 1200);
 });
 
@@ -1665,3 +1661,24 @@ const setupTouchDrag = () => {
 setupDropZones();
 setupTouchDrag();
 loadLayout();
+
+// Re-layout the board (hand fan + piles) when viewport size changes.
+// The hand layout and pile positions are derived from `ui.board.getBoundingClientRect()`,
+// so we need to re-render on resize/orientation changes.
+let resizeRaf = 0;
+const scheduleResizeRender = () => {
+  if (resizeRaf) return;
+  resizeRaf = window.requestAnimationFrame(() => {
+    resizeRaf = 0;
+    render();
+  });
+};
+
+window.addEventListener("resize", scheduleResizeRender, { passive: true });
+window.addEventListener("orientationchange", scheduleResizeRender, { passive: true });
+window.addEventListener("pageshow", scheduleResizeRender, { passive: true });
+
+// On mobile, the visual viewport can change when browser chrome appears/disappears.
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", scheduleResizeRender, { passive: true });
+}

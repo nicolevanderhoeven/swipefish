@@ -299,7 +299,9 @@ body {
 
 .board {
   position: relative;
-  margin: 0 auto;
+  /* The hand fan is positioned with a negative top, so it can overlap the content above
+     the board. Add top margin so the hand stays below the top UI bar. */
+  margin: clamp(2rem, 6vh, 4.5rem) auto 0;
   width: min(92vw, 720px);
   aspect-ratio: 1;
 }
@@ -342,7 +344,8 @@ body {
   height: 44%;
   transform: translateX(-50%);
   pointer-events: none;
-  z-index: 6;
+  /* Keep the hand fan above the piles visually. */
+  z-index: 10;
 }
 
 .hand .card {
@@ -359,7 +362,6 @@ body {
   align-items: center;
   justify-content: flex-start;
   gap: 0.35rem;
-  /* Must be above the hand drop-zone overlay so deck/discard remain draggable */
   z-index: 7;
   transform: translate(-50%, -50%);
 }
@@ -519,7 +521,9 @@ body {
 .table-row {
   width: 100%;
   display: grid;
-  grid-template-columns: 28px 1fr;
+  /* Use minmax(0, 1fr) so the cards column can actually shrink and scroll,
+     instead of overflowing past the right edge (which can also break hit-testing). */
+  grid-template-columns: 28px minmax(0, 1fr);
   align-items: stretch;
   gap: calc(var(--table-card-gap, 0.6) * 0.5rem);
 }
@@ -544,8 +548,13 @@ body {
   justify-content: center;
   align-content: start;
   gap: calc(var(--table-card-gap, 0.6) * 1rem);
+  /* Critical: allow this grid item to shrink so overflow-x can kick in.
+     Without this, the row can overflow to the right and get visually clipped. */
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
   padding-bottom: 0.25rem;
   scroll-snap-type: x proximity;
