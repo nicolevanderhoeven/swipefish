@@ -1,5 +1,9 @@
 services:
   app:
+    image: cardtable:test
+    build:
+      context: .
+      target: test
     volumes: []
     environment:
       MIX_ENV: test
