@@ -24,6 +24,27 @@ Notes:
 - In this repo, **frontend and backend are separate deployments**.
 - The Ingress routes `/` to frontend and `/socket.io` to backend (see `k8s/ingress.yaml`).
 
+## Realtime updates across multiple backend pods (Socket.IO)
+
+Realtime updates are done via **Socket.IO room broadcasts** (e.g. `io.to(roomId).emit(...)` in `backend/src/rooms.ts`).
+
+**Today:** the backend uses Socket.IO’s **default in-memory adapter**, so broadcasts only reach clients connected to the **same** backend pod. With multiple backend replicas (`k8s/backend-deployment.yaml`), two players in the same game can land on different pods and **miss each other’s updates**.
+
+**Ingress sticky sessions** can keep *a given client* pinned to one pod, but NGINX Ingress can’t reliably route *all clients for a given game* to the same pod. The standard fix is a **cross-pod adapter**, typically Redis.
+
+```mermaid
+flowchart LR
+  c1[Client A] -- WebSocket --> be1[BackendPod1]
+  c2[Client B] -- WebSocket --> be2[BackendPod2]
+
+  be1 -- publish game event --> redis[(Redis pub/sub)]
+  redis -- fanout event --> be1
+  redis -- fanout event --> be2
+
+  be1 -- emit to local sockets --> c1
+  be2 -- emit to local sockets --> c2
+```
+
 ## Kubernetes resources in this repo
 
 - **Ingress**:
