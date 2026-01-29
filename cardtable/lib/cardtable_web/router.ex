@@ -18,6 +18,9 @@ defmodule CardtableWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    # Kubernetes liveness/readiness probes hit this endpoint.
+    # It must remain fast and must not redirect to HTTPS.
+    get "/health", HealthController, :index
   end
 
   # Other scopes may use custom stacks.

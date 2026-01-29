@@ -1,0 +1,34 @@
+#!/bin/sh
+set -eu
+
+BASE_URL="${BASE_URL:-http://localhost:4000/}"
+TIMEOUT_S="${TIMEOUT_S:-30}"
+
+start="$(date +%s)"
+
+echo "[smoke] starting release"
+bin/cardtable start >/tmp/cardtable-smoke.log 2>&1 &
+
+echo "[smoke] waiting for ${BASE_URL} (timeout ${TIMEOUT_S}s)"
+
+while :; do
+  if curl -fsS "${BASE_URL}" >/dev/null 2>&1; then
+    echo "[smoke] ok"
+    echo "[smoke] stopping release"
+    bin/cardtable stop >/dev/null 2>&1 || true
+    exit 0
+  fi
+
+  now="$(date +%s)"
+  elapsed="$((now - start))"
+  if [ "${elapsed}" -ge "${TIMEOUT_S}" ]; then
+    echo "[smoke] timeout after ${elapsed}s"
+    echo "[smoke] last logs:"
+    tail -n 200 /tmp/cardtable-smoke.log || true
+    bin/cardtable stop >/dev/null 2>&1 || true
+    exit 1
+  fi
+
+  sleep 1
+done
+

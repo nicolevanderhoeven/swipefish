@@ -4,12 +4,13 @@ LOCAL_DEV_IMAGE=cardtable:dev
 LOCAL_PROD_IMAGE=cardtable:latest
 DOCKER_IMAGE=noelbk/cardtable:latest
 K8S_NAMESPACE=cardtable
+DOCKER_PLATFORM?=linux/amd64
 
 build: ## Build the dev image (docker-compose)
 	$(COMPOSE) build
 
 build-prod: ## Build the production runtime image
-	docker build --target runtime -t $(LOCAL_PROD_IMAGE) .
+	docker build --platform $(DOCKER_PLATFORM) --target runtime -t $(LOCAL_PROD_IMAGE) .
 
 start: build
 	$(COMPOSE) up -d
@@ -41,9 +42,9 @@ test-smoke: ## Run smoke tests against the runtime image (no source shipped)
 		-e PORT=4000 \
 		cardtable:smoke
 
-deploy: build-prod
+deploy:
 	# Build + push the correct platform for the cluster (DigitalOcean nodes are amd64).
-	# This avoids ImagePullBackOff: "no match for platform in manifest".
+	# We push directly and do not require a local image export.
 	docker buildx build --platform $(DOCKER_PLATFORM) --target runtime -t $(DOCKER_IMAGE) --push .
 	./deploy.sh
 	kubectl rollout status deployment/cardtable -n $(K8S_NAMESPACE) --timeout=10m

@@ -108,6 +108,6 @@ FROM runtime AS smoke
 
 RUN apk add --no-cache curl
 
-COPY bin/smoke ./bin/smoke
+COPY bin/smoke_test ./bin/smoke_test
 
-CMD ["sh", "bin/smoke"]
+CMD ["sh", "bin/smoke_test"]
